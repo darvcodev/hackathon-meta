@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>RoyaLens — Mi finca</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0;background:#07140D}
+a{color:#F2B544}a:hover{color:#FFD27A}
+@keyframes rl-pulse{0%,100%{opacity:.4;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
+@keyframes rl-sweep{to{transform:rotate(360deg)}}
+.rl-pin{animation:rl-pulse 2.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.rl-sweep{animation:rl-sweep 6s linear infinite;transform-origin:300px 210px}
+.rl-side a{color:#B9CCBF;text-decoration:none}
+.rl-side a:hover{color:#FFFFFF;background:#12291D}
+.rl-lote:hover{filter:brightness(1.25)}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: flex; overflow: hidden; background: #07140D; font-family: Inter, system-ui, sans-serif; color: #EAF2EC">
+
+  <!-- Menú lateral -->
+  <aside class="rl-side" style="width: 248px; flex: none; display: flex; flex-direction: column; gap: 6px; padding: 28px 18px; box-sizing: border-box; background: #0A1B12; border-right: 1px solid #1B3428">
+    <a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 0 10px 26px; font-family: Sora, sans-serif; font-weight: 800; font-size: 20px; color: #FFFFFF">
+      <svg aria-hidden="true" width="30" height="30" viewBox="0 0 34 34"><circle cx="17" cy="17" r="15" fill="none" stroke="#F2B544" stroke-width="2"></circle><ellipse cx="17" cy="17" rx="7" ry="10" fill="#E5483B"></ellipse></svg>
+      RoyaLens
+    </a>
+    <a href="Panel.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-radius: 12px; background: #16301F; color: #FFFFFF; font-weight: 600">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F2B544" stroke-width="2"><path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"></path></svg>Mi finca</a>
+    <a href="Roya.dc.html" style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-radius: 12px">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path></svg>Escáner de roya</a>
+    <a href="Maduracion.dc.html" style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-radius: 12px">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="14" r="4"></circle><circle cx="16" cy="14" r="4"></circle><circle cx="12" cy="8" r="4"></circle></svg>Maduración</a>
+    <a href="#historial" style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; border-radius: 12px">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 5-6"></path></svg>Historial</a>
+    <div style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 14px; color: #6F8A7A">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17h18"></path><path d="M12 17V7"></path></svg>Suelo · pronto</div>
+    <div style="flex: 1"></div>
+    <a href="Movil.dc.html" style="display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 14px; background: #12291D; border: 1px solid #23463A">
+      <span style="font-weight: 600; color: #FFFFFF">Escanea desde el cafetal</span>
+      <span style="font-size: 13px; color: #A3BBAA">Abre RoyaLens en tu celular</span>
+    </a>
+  </aside>
+
+  <!-- Contenido -->
+  <main style="flex: 1; display: flex; flex-direction: column; padding: 28px 36px; box-sizing: border-box; gap: 22px; min-width: 0">
+    <header style="display: flex; align-items: flex-end; justify-content: space-between">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.5px; color: #F2B544">[MUNICIPIO, DEPARTAMENTO] · DATOS DE EJEMPLO</div>
+        <h1 style="margin: 0; font-family: Sora, sans-serif; font-size: 34px; font-weight: 800">Finca [Nombre de tu finca]</h1>
+      </div>
+      <a href="Roya.dc.html" style="display: inline-flex; align-items: center; gap: 10px; height: 48px; padding: 0 22px; border-radius: 12px; background: #F2B544; color: #1A1206; font-weight: 700; text-decoration: none">
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Nuevo escaneo</a>
+    </header>
+
+    <!-- Indicadores -->
+    <section aria-label="Resumen" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+      <div style="padding: 18px 20px; border-radius: 16px; background: #0E2218; border: 1px solid #1F3A2B; display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 13px; color: #A3BBAA">Roya promedio</span>
+        <span style="font-family: Sora, sans-serif; font-size: 32px; font-weight: 800; color: #F0A04B">6.2%</span>
+        <span style="font-size: 12px; color: #FFB4A8">sube 2.1 pts en 2 semanas</span>
+      </div>
+      <div style="padding: 18px 20px; border-radius: 16px; background: #0E2218; border: 1px solid #1F3A2B; display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 13px; color: #A3BBAA">Cerezas maduras</span>
+        <span style="font-family: Sora, sans-serif; font-size: 32px; font-weight: 800; color: #FF7A6B">58%</span>
+        <span style="font-size: 12px; color: #C8F2D3">Lote 2 listo para recolectar</span>
+      </div>
+      <div style="padding: 18px 20px; border-radius: 16px; background: #0E2218; border: 1px solid #1F3A2B; display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 13px; color: #A3BBAA">Escaneos este mes</span>
+        <span style="font-family: Sora, sans-serif; font-size: 32px; font-weight: 800">124</span>
+        <span style="font-size: 12px; color: #A3BBAA">en 4 lotes</span>
+      </div>
+      <div style="padding: 18px 20px; border-radius: 16px; background: #0E2218; border: 1px solid #1F3A2B; display: flex; flex-direction: column; gap: 6px">
+        <span style="font-size: 13px; color: #A3BBAA">Próxima visita técnica</span>
+        <span style="font-family: Sora, sans-serif; font-size: 26px; font-weight: 800; line-height: 1.25">[Fecha]</span>
+        <span style="font-size: 12px; color: #A3BBAA">Extensionista del Comité</span>
+      </div>
+    </section>
+
+    <div style="flex: 1; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 20px; min-height: 0">
+      <!-- Mapa 3D de lotes -->
+      <section aria-label="Mapa de lotes" style="position: relative; border-radius: 20px; background: #0B1D14; border: 1px solid #1F3A2B; overflow: hidden; display: flex; flex-direction: column">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 18px 22px">
+          <h2 style="margin: 0; font-family: Sora, sans-serif; font-size: 18px; font-weight: 600">Mapa de lotes</h2>
+          <div style="display: flex; gap: 14px; font-size: 12px; color: #B9CCBF">
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #3FA866"></span>Sana</span>
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #E9B23B"></span>Leve</span>
+            <span style="display: flex; align-items: center; gap: 6px"><span style="width: 10px; height: 10px; border-radius: 3px; background: #E3632D"></span>Alta</span>
+          </div>
+        </div>
+        <div style="flex: 1; perspective: 1100px; display: flex; align-items: center; justify-content: center">
+          <svg role="img" aria-label="Mapa en perspectiva de cuatro lotes con su nivel de roya" width="600" height="420" viewBox="0 0 600 420" style="transform: rotateX(52deg) rotateZ(-18deg); transform-style: preserve-3d; overflow: visible">
+            <g stroke="#2A4D3B" stroke-width="1" opacity=".6">
+              <path d="M0 70H600M0 140H600M0 210H600M0 280H600M0 350H600"></path>
+              <path d="M100 0V420M200 0V420M300 0V420M400 0V420M500 0V420"></path>
+            </g>
+            <path class="rl-lote" d="M40 40 L280 20 L300 190 L60 210 Z" fill="#3FA866" fill-opacity=".85" stroke="#9BE3B4" stroke-width="2"></path>
+            <path class="rl-lote" d="M300 20 L560 40 L540 200 L320 190 Z" fill="#E9B23B" fill-opacity=".85" stroke="#FFE19A" stroke-width="2"></path>
+            <path class="rl-lote" d="M60 230 L300 210 L310 400 L80 390 Z" fill="#E3632D" fill-opacity=".9" stroke="#FFB08A" stroke-width="2"></path>
+            <path class="rl-lote" d="M320 210 L540 220 L520 390 L330 400 Z" fill="#3FA866" fill-opacity=".7" stroke="#9BE3B4" stroke-width="2"></path>
+            <g class="rl-sweep"><path d="M300 210 L300 -20 A230 230 0 0 1 462 47 Z" fill="#F2B544" fill-opacity=".12"></path></g>
+            <circle class="rl-pin" cx="180" cy="300" r="10" fill="#FFFFFF"></circle>
+          </svg>
+        </div>
+        <div style="position: absolute; left: 22px; bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap">
+          <span style="padding: 8px 12px; border-radius: 10px; background: #2B130B; border: 1px solid #E3632D; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #FFC9AE">LOTE 3 · ROYA 14.6% · REVISAR</span>
+          <span style="padding: 8px 12px; border-radius: 10px; background: #2A220E; border: 1px solid #E9B23B; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #FFE7A8">LOTE 2 · 71% MADURO</span>
+        </div>
+      </section>
+
+      <!-- Alertas e historial -->
+      <section id="historial" aria-label="Actividad" style="display: flex; flex-direction: column; gap: 16px; min-height: 0">
+        <div style="padding: 20px; border-radius: 20px; background: #24120C; border: 1px solid #6B2C17; display: flex; flex-direction: column; gap: 10px">
+          <div style="display: flex; align-items: center; gap: 10px; font-family: Sora, sans-serif; font-weight: 600; font-size: 16px; color: #FFC9AE">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF8A5C" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"></path></svg>
+            Lote 3 necesita atención
+          </div>
+          <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #F2D6C9">La roya pasó de 8% a 14.6% en dos semanas. Llama a tu extensionista antes de la próxima lluvia.</p>
+        </div>
+        <div style="flex: 1; padding: 20px; border-radius: 20px; background: #0E2218; border: 1px solid #1F3A2B; display: flex; flex-direction: column; gap: 14px; min-height: 0">
+          <h2 style="margin: 0; font-family: Sora, sans-serif; font-size: 16px; font-weight: 600">Evolución de la roya · Lote 3</h2>
+          <svg role="img" aria-label="Línea de roya en el Lote 3 subiendo de 3 a 14.6 por ciento en seis semanas" width="100%" height="150" viewBox="0 0 400 150" preserveAspectRatio="none">
+            <path d="M0 140H400M0 95H400M0 50H400" stroke="#1F3A2B" stroke-width="1"></path>
+            <path d="M10 128 L80 122 L150 112 L220 100 L290 82 L390 34" fill="none" stroke="#F0A04B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+            <circle cx="390" cy="34" r="6" fill="#F0A04B"></circle>
+          </svg>
+          <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px">
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1F3A2B"><span>Hoja · Lote 3</span><span style="font-family: 'JetBrains Mono', monospace; color: #F0A04B">14.6% · Moderada</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1F3A2B"><span>Racimo · Lote 2</span><span style="font-family: 'JetBrains Mono', monospace; color: #FF7A6B">71% maduro</span></div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0"><span>Hoja · Lote 1</span><span style="font-family: 'JetBrains Mono', monospace; color: #7EDC9D">0.4% · Sana</span></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

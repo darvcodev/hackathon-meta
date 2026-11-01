@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>RoyaLens — Escáner de roya</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0;background:#07140D}
+a{color:#F2B544}a:hover{color:#FFD27A}
+@keyframes rl-scan{0%{top:6%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:94%;opacity:0}}
+@keyframes rl-draw{from{stroke-dashoffset:420}to{stroke-dashoffset:0}}
+@keyframes rl-pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+.rl-scan{animation:rl-scan 3.6s ease-in-out infinite}
+.rl-gauge{stroke-dasharray:420;animation:rl-draw 1.6s ease-out both}
+.rl-lesion{animation:rl-pop .6s ease-out both;transform-box:fill-box;transform-origin:center}
+.rl-range{width:100%;accent-color:#F2B544;height:28px}
+.rl-btn:hover{filter:brightness(1.12)}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: flex; flex-direction: column; overflow: hidden; background: #07140D; font-family: Inter, system-ui, sans-serif; color: #EAF2EC">
+
+  <!-- Barra superior -->
+  <header style="height: 76px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 36px; border-bottom: 1px solid #1B3428">
+    <div style="display: flex; align-items: center; gap: 18px">
+      <a href="Panel.dc.html" aria-label="Volver a Mi finca" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px; border: 1px solid #23463A; color: #EAF2EC">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"></path></svg>
+      </a>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <h1 style="margin: 0; font-family: Sora, sans-serif; font-size: 22px; font-weight: 800">Escáner de roya</h1>
+        <span style="font-size: 13px; color: #A3BBAA">Lote 3 · hoja del tercio medio · ejemplo</span>
+      </div>
+    </div>
+    <ol aria-label="Pasos del análisis" style="display: flex; gap: 10px; list-style: none; margin: 0; padding: 0; font-size: 13px">
+      <li style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px; background: #10291C; color: #C8F2D3"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5FCB7E" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"></path></svg>Hoja recortada · SAM</li>
+      <li style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px; background: #10291C; color: #C8F2D3"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5FCB7E" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"></path></svg>Lesiones segmentadas</li>
+      <li style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px; background: #10291C; color: #C8F2D3"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5FCB7E" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"></path></svg>Área medida</li>
+      <li style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: 999px; background: #2A220E; color: #FFE7A8"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F2B544" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"></path></svg>Explicado · Muse</li>
+    </ol>
+  </header>
+
+  <div style="flex: 1; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; padding: 24px 36px 28px; min-height: 0">
+
+    <!-- Visor antes / después -->
+    <section aria-label="Comparación de la hoja" style="display: flex; flex-direction: column; gap: 14px; min-height: 0">
+      <div style="position: relative; flex: 1; border-radius: 24px; overflow: hidden; background: #0B1D14; border: 1px solid #1F3A2B">
+        <!-- Capa original -->
+        <div style="position: absolute; inset: 0">
+          <svg role="img" aria-label="Foto original de una hoja de café con manchas amarillas y naranjas" width="100%" height="100%" viewBox="0 0 700 640" preserveAspectRatio="xMidYMid slice">
+            <rect width="700" height="640" fill="#3E5A33"></rect>
+            <circle cx="120" cy="90" r="140" fill="#4F6E3F"></circle>
+            <circle cx="620" cy="560" r="180" fill="#2F4A28"></circle>
+            <g transform="translate(350 320) rotate(-28)">
+              <path d="M-260 0 C -170 -150 120 -170 270 0 C 120 170 -170 150 -260 0 Z" fill="#2E7D3E"></path>
+              <path d="M-255 0 L 262 0" stroke="#86B86A" stroke-width="4"></path>
+              <path d="M-170 0 C -150 -50 -120 -80 -90 -100 M-80 0 C -60 -60 -30 -100 0 -118 M10 0 C 30 -60 60 -100 90 -112 M100 0 C 120 -50 150 -80 180 -88 M-170 0 C -150 50 -120 80 -90 100 M-80 0 C -60 60 -30 100 0 118 M10 0 C 30 60 60 100 90 112 M100 0 C 120 50 150 80 180 88" stroke="#5D9A52" stroke-width="2.4" fill="none"></path>
+              <circle cx="-120" cy="-42" r="20" fill="#C9A13A"></circle><circle cx="-120" cy="-42" r="11" fill="#D9862C"></circle>
+              <circle cx="-40" cy="56" r="16" fill="#C9A13A"></circle><circle cx="-40" cy="56" r="8" fill="#D9862C"></circle>
+              <circle cx="40" cy="-60" r="24" fill="#C9A13A"></circle><circle cx="40" cy="-60" r="13" fill="#D9862C"></circle>
+              <circle cx="120" cy="40" r="14" fill="#C9A13A"></circle><circle cx="120" cy="40" r="7" fill="#D9862C"></circle>
+              <circle cx="-190" cy="22" r="10" fill="#C9A13A"></circle>
+              <circle cx="180" cy="-22" r="9" fill="#C9A13A"></circle>
+            </g>
+          </svg>
+        </div>
+        <!-- Capa de análisis, recortada por el deslizador -->
+        <div style="position: absolute; top: 0; bottom: 0; left: 0; width: {{split}}%; overflow: hidden; border-right: 3px solid #F2B544">
+          <svg role="img" aria-label="Análisis: hoja contorneada en verde y siete lesiones resaltadas en naranja" width="{{viewerW}}" height="100%" viewBox="0 0 700 640" preserveAspectRatio="xMidYMid slice" style="display: block; height: 100%">
+            <rect width="700" height="640" fill="#14201A"></rect>
+            <g transform="translate(350 320) rotate(-28)">
+              <path d="M-260 0 C -170 -150 120 -170 270 0 C 120 170 -170 150 -260 0 Z" fill="#1E5A2C" stroke="#00E676" stroke-width="5"></path>
+              <path d="M-255 0 L 262 0" stroke="#3E7A47" stroke-width="3"></path>
+              <g fill="#FF4500" fill-opacity=".85" stroke="#FFEB3B" stroke-width="3">
+                <circle class="rl-lesion" cx="-120" cy="-42" r="21"></circle>
+                <circle class="rl-lesion" cx="-40" cy="56" r="17" style="animation-delay: .15s"></circle>
+                <circle class="rl-lesion" cx="40" cy="-60" r="25" style="animation-delay: .3s"></circle>
+                <circle class="rl-lesion" cx="120" cy="40" r="15" style="animation-delay: .45s"></circle>
+                <circle class="rl-lesion" cx="-190" cy="22" r="11" style="animation-delay: .6s"></circle>
+                <circle class="rl-lesion" cx="180" cy="-22" r="10" style="animation-delay: .75s"></circle>
+              </g>
+            </g>
+          </svg>
+          <div class="rl-scan" style="position: absolute; left: 0; right: 0; height: 2px; background: #F2B544; box-shadow: 0 0 20px 5px rgba(242,181,68,.5)"></div>
+        </div>
+        <span style="position: absolute; left: 18px; top: 18px; padding: 7px 12px; border-radius: 9px; background: rgba(7,20,13,.85); font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #FFE7A8">ANÁLISIS IA</span>
+        <span style="position: absolute; right: 18px; top: 18px; padding: 7px 12px; border-radius: 9px; background: rgba(7,20,13,.85); font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #EAF2EC">FOTO ORIGINAL</span>
+      </div>
+      <label style="display: flex; align-items: center; gap: 16px; font-size: 14px; color: #B9CCBF">
+        <span style="flex: none">Desliza para comparar</span>
+        <input class="rl-range" type="range" min="0" max="100" value="{{split}}" onInput="{{onSplit}}">
+      </label>
+    </section>
+
+    <!-- Resultado -->
+    <section aria-label="Resultado" style="display: flex; flex-direction: column; gap: 16px; min-height: 0">
+      <div style="display: flex; gap: 22px; align-items: center; padding: 22px 24px; border-radius: 22px; background: #0E2218; border: 1px solid #1F3A2B">
+        <div style="position: relative; width: 170px; height: 100px; flex: none">
+          <svg role="img" aria-label="Medidor de severidad en 14.6 por ciento" width="170" height="100" viewBox="0 0 170 100">
+            <path d="M15 90 A70 70 0 0 1 155 90" fill="none" stroke="#1F3A2B" stroke-width="14" stroke-linecap="round"></path>
+            <path class="rl-gauge" d="M15 90 A70 70 0 0 1 155 90" fill="none" stroke="#F0A04B" stroke-width="14" stroke-linecap="round" style="stroke-dasharray: 64 420"></path>
+          </svg>
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; text-align: center; font-family: Sora, sans-serif; font-weight: 800; font-size: 30px; color: #F0A04B">14.6%</div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 13px; color: #A3BBAA">Hoja afectada por roya</span>
+          <span style="font-family: Sora, sans-serif; font-size: 24px; font-weight: 800">Severidad moderada</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #B9CCBF">6 LESIONES · CONFIANZA SAM 0.87</span>
+        </div>
+      </div>
+
+      <div style="padding: 20px 22px; border-radius: 20px; background: #0E2218; border: 1px solid #1F3A2B; display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; font-family: Sora, sans-serif; font-size: 15px; font-weight: 600; color: #F2B544">Lo que ve la IA</h2>
+        <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DCE8DF">Manchas amarillas con polvillo naranja en el envés, típicas de roya. Están repartidas por toda la hoja, no solo en el borde.</p>
+      </div>
+      <div style="padding: 20px 22px; border-radius: 20px; background: #0E2218; border: 1px solid #1F3A2B; display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; font-family: Sora, sans-serif; font-size: 15px; font-weight: 600; color: #F2B544">Qué hacer</h2>
+        <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DCE8DF">Revisa otras 30 hojas del lote para confirmar. Si se repite, consulta a tu extensionista del Comité de Cafeteros antes de aplicar cualquier producto.</p>
+      </div>
+      <div style="padding: 16px 22px; border-radius: 16px; border: 1px dashed #2F5242; font-size: 14px; color: #B9CCBF">Podría confundirse con: <b style="color: #EAF2EC">mancha de hierro</b>, <b style="color: #EAF2EC">quemazón por sol</b>.</div>
+
+      <div style="flex: 1"></div>
+      <div style="display: flex; gap: 12px">
+        <a class="rl-btn" href="Panel.dc.html" style="flex: 1; display: flex; align-items: center; justify-content: center; height: 54px; border-radius: 14px; background: #F2B544; color: #1A1206; font-weight: 700; text-decoration: none">Guardar en Lote 3</a>
+        <a class="rl-btn" href="Movil.dc.html" style="flex: 1; display: flex; align-items: center; justify-content: center; height: 54px; border-radius: 14px; border: 1px solid #3A5E49; color: #EAF2EC; font-weight: 600; text-decoration: none">Escanear otra hoja</a>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { split: 55 };
+  }
+  renderVals() {
+    return {
+      split: this.state.split,
+      viewerW: 745,
+      onSplit: (e) => this.setState({ split: Number(e.target.value) }),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>RoyaLens — Maduración del grano</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap">
+<style>
+body{margin:0;background:#07140D}
+a{color:#F2B544}a:hover{color:#FFD27A}
+@keyframes rl-ping{0%{transform:scale(1);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+@keyframes rl-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.rl-ping{animation:rl-ping 1.8s ease-out infinite}
+.rl-bar{animation:rl-grow 1.2s ease-out both;transform-origin:left}
+.rl-chip:hover{border-color:#F2B544}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; display: flex; flex-direction: column; overflow: hidden; background: #07140D; font-family: Inter, system-ui, sans-serif; color: #EAF2EC">
+
+  <header style="height: 76px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 36px; border-bottom: 1px solid #1B3428">
+    <div style="display: flex; align-items: center; gap: 18px">
+      <a href="Panel.dc.html" aria-label="Volver a Mi finca" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px; border: 1px solid #23463A; color: #EAF2EC">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"></path></svg>
+      </a>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <h1 style="margin: 0; font-family: Sora, sans-serif; font-size: 22px; font-weight: 800">Maduración del grano</h1>
+        <span style="font-size: 13px; color: #A3BBAA">Lote 2 · racimo de ejemplo</span>
+      </div>
+    </div>
+    <div role="group" aria-label="Filtrar por estado" style="display: flex; gap: 8px">
+      <sc-for list="{{chips}}" as="c" hint-placeholder-count="5">
+        <button class="rl-chip" type="button" onClick="{{c.pick}}" aria-pressed="{{c.pressed}}" style="{{c.style}}">
+          <span style="width: 10px; height: 10px; border-radius: 50%; background: {{c.color}}"></span>{{c.label}}
+        </button>
+      </sc-for>
+    </div>
+  </header>
+
+  <div style="flex: 1; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; padding: 24px 36px 28px; min-height: 0">
+
+    <!-- Racimo con detecciones -->
+    <section aria-label="Racimo analizado" style="position: relative; border-radius: 24px; overflow: hidden; background: #16301F; border: 1px solid #1F3A2B">
+      <svg aria-hidden="true" width="745" height="690" viewBox="0 0 745 690" style="position: absolute; left: 0; top: 40px">
+        <rect width="745" height="690" fill="#16301F"></rect>
+        <path d="M-20 520 C 160 430 330 380 520 250 C 600 190 680 140 780 110" stroke="#5B3A22" stroke-width="16" fill="none" stroke-linecap="round"></path>
+        <path d="M120 470 C 40 380 20 300 60 250 C 120 300 150 380 120 470 Z" fill="#2F8A52"></path>
+        <path d="M300 380 C 280 260 340 180 400 160 C 420 250 380 330 300 380 Z" fill="#3BA463"></path>
+        <path d="M560 230 C 640 260 700 330 690 380 C 620 370 570 310 560 230 Z" fill="#2F8A52"></path>
+        <path d="M420 300 C 500 330 540 400 520 450 C 450 430 420 370 420 300 Z" fill="#3BA463"></path>
+        <path d="M200 430 C 230 520 210 600 170 640 C 140 570 160 490 200 430 Z" fill="#2F8A52"></path>
+      </svg>
+      <sc-for list="{{cherries}}" as="ch" hint-placeholder-count="30">
+        <div style="{{ch.style}}" title="{{ch.label}}"></div>
+      </sc-for>
+      <div style="position: absolute; left: 450px; top: 370px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #F2B544" class="rl-ping"></div>
+      <div style="position: absolute; left: 400px; top: 430px; padding: 8px 12px; border-radius: 10px; background: rgba(7,20,13,.9); border: 1px solid #F2B544; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #FFE7A8">MADURO · conf 0.93</div>
+      <span style="position: absolute; left: 18px; top: 18px; padding: 7px 12px; border-radius: 9px; background: rgba(7,20,13,.85); font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #FFE7A8">{{total}} CEREZAS DETECTADAS · SAM 3.1</span>
+    </section>
+
+    <!-- Resultado -->
+    <section aria-label="Resultado de maduración" style="display: flex; flex-direction: column; gap: 16px; min-height: 0">
+      <div style="padding: 24px; border-radius: 22px; background: #0E2218; border: 1px solid #1F3A2B; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; align-items: baseline; justify-content: space-between">
+          <span style="font-size: 14px; color: #A3BBAA">Cerezas en punto de cosecha</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #B9CCBF">MADURAS / TOTAL</span>
+        </div>
+        <div style="font-family: Sora, sans-serif; font-weight: 800; font-size: 64px; line-height: 1; color: #FF7A6B">{{ripePct}}%</div>
+        <div style="display: flex; height: 18px; border-radius: 9px; overflow: hidden; background: #1F3A2B">
+          <sc-for list="{{bars}}" as="b" hint-placeholder-count="4">
+            <div class="rl-bar" style="{{b.style}}"></div>
+          </sc-for>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px">
+          <sc-for list="{{bars}}" as="b" hint-placeholder-count="4">
+            <div style="display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 12px; background: #0B1D14">
+              <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #B9CCBF"><span style="width: 9px; height: 9px; border-radius: 50%; background: {{b.color}}"></span>{{b.label}}</span>
+              <span style="font-family: Sora, sans-serif; font-weight: 800; font-size: 22px">{{b.count}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="padding: 20px 22px; border-radius: 20px; background: #2A0F0D; border: 1px solid #7A2A22; display: flex; gap: 16px; align-items: center">
+        <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FF8A7A" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <span style="font-family: Sora, sans-serif; font-weight: 600; font-size: 17px; color: #FFD3CC">Buen momento para recolectar</span>
+          <span style="font-size: 14px; line-height: 1.5; color: #F2D6D1">Más de la mitad del racimo está en punto. Recoge solo las rojas y vuelve en una semana por las pintonas.</span>
+        </div>
+      </div>
+
+      <div style="padding: 20px 22px; border-radius: 20px; background: #0E2218; border: 1px solid #1F3A2B; display: flex; flex-direction: column; gap: 8px">
+        <h2 style="margin: 0; font-family: Sora, sans-serif; font-size: 15px; font-weight: 600; color: #F2B544">Por qué importa</h2>
+        <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #DCE8DF">Recoger cerezas verdes o sobremaduras baja la calidad en taza. Contar por racimo ayuda a planear los pases de cosecha y los recolectores.</p>
+      </div>
+
+      <div style="flex: 1"></div>
+      <div style="display: flex; gap: 12px">
+        <a href="Panel.dc.html" style="flex: 1; display: flex; align-items: center; justify-content: center; height: 54px; border-radius: 14px; background: #F2B544; color: #1A1206; font-weight: 700; text-decoration: none">Guardar en Lote 2</a>
+        <a href="Movil.dc.html" style="flex: 1; display: flex; align-items: center; justify-content: center; height: 54px; border-radius: 14px; border: 1px solid #3A5E49; color: #EAF2EC; font-weight: 600; text-decoration: none">Escanear otro racimo</a>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { filter: 'todas' };
+  }
+  renderVals() {
+    const STAGES = {
+      verde: { label: 'Verde', color: '#7FB04A' },
+      pinton: { label: 'Pintón', color: '#E9B23B' },
+      maduro: { label: 'Maduro', color: '#E5483B' },
+      sobre: { label: 'Sobremaduro', color: '#6E1B33' },
+    };
+    // Posiciones de ejemplo a lo largo de la rama: [x, y, etapa]
+    const pts = [
+      [130,500,'maduro'],[158,486,'maduro'],[146,520,'sobre'],[174,512,'maduro'],[118,528,'maduro'],[190,490,'pinton'],
+      [250,446,'maduro'],[276,432,'maduro'],[262,470,'maduro'],[290,456,'pinton'],[236,470,'sobre'],[304,428,'maduro'],
+      [360,392,'maduro'],[386,378,'pinton'],[372,414,'maduro'],[400,400,'maduro'],[346,416,'maduro'],[414,372,'pinton'],
+      [470,330,'maduro'],[494,316,'pinton'],[482,352,'maduro'],[508,340,'verde'],[458,350,'maduro'],
+      [560,270,'pinton'],[584,256,'verde'],[572,292,'verde'],[598,280,'verde'],[548,292,'pinton'],
+      [640,212,'verde'],[664,200,'verde'],[652,234,'verde'],[676,222,'verde'],
+    ];
+    const f = this.state.filter;
+    const counts = { verde: 0, pinton: 0, maduro: 0, sobre: 0 };
+    pts.forEach((p) => { counts[p[2]] += 1; });
+    const total = pts.length;
+    const cherries = pts.map((p) => {
+      const st = STAGES[p[2]];
+      const on = f === 'todas' || f === p[2];
+      return {
+        label: st.label,
+        style: 'position:absolute;left:' + (p[0] - 14) + 'px;top:' + (p[1] + 26) + 'px;width:28px;height:28px;border-radius:50%;box-sizing:border-box;'
+          + 'background:' + st.color + ';border:3px solid ' + (on ? '#FFFFFF' : 'transparent') + ';opacity:' + (on ? 1 : 0.25)
+          + ';box-shadow:' + (on ? '0 0 0 3px ' + st.color + '66' : 'none') + ';transition:opacity .3s,border-color .3s',
+      };
+    });
+    const chipDefs = [['todas', 'Todas', '#EAF2EC']].concat(Object.keys(STAGES).map((k) => [k, STAGES[k].label, STAGES[k].color]));
+    const chips = chipDefs.map(([id, label, color]) => {
+      const sel = f === id;
+      return {
+        label, color, pressed: sel ? 'true' : 'false',
+        pick: () => this.setState({ filter: id }),
+        style: 'display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-radius:999px;font:600 14px Inter,sans-serif;cursor:pointer;'
+          + 'color:' + (sel ? '#1A1206' : '#EAF2EC') + ';background:' + (sel ? '#F2B544' : '#0E2218') + ';border:1px solid ' + (sel ? '#F2B544' : '#2C4F3B'),
+      };
+    });
+    const bars = Object.keys(STAGES).map((k) => ({
+      label: STAGES[k].label, color: STAGES[k].color, count: counts[k],
+      style: 'width:' + (100 * counts[k] / total) + '%;background:' + STAGES[k].color,
+    }));
+    return { cherries, chips, bars, total, ripePct: Math.round(100 * counts.maduro / total) };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bosque: #07140d;
+  --color-lateral: #0a1b12;
+  --color-visor: #0b1d14;
+  --color-tarjeta: #0e2218;
+  --color-activo: #16301f;
+  --color-borde: #1f3a2b;
+  --color-borde-fuerte: #3a5e49;
+  --color-ambar: #f2b544;
+  --color-ambar-claro: #ffe7a8;
+  --color-naranja: #f0a04b;
+  --color-cereza: #e5483b;
+  --color-exito: #5fcb7e;
+  --color-texto: #eaf2ec;
+  --color-claro: #dce8df;
+  --color-medio: #b9ccbf;
+  --color-suave: #a3bbaa;
+
+  --font-sora: "Sora", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bosque);
+  color: var(--color-texto);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ambar);
+  outline-offset: 2px;
+}
+
+@keyframes rl-giro {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes rl-giro-inverso {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+@keyframes rl-escaneo {
+  0% {
+    top: 4%;
+    opacity: 0;
+  }
+  10%,
+  90% {
+    opacity: 1;
+  }
+  100% {
+    top: 96%;
+    opacity: 0;
+  }
+}
+@keyframes rl-flotar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+@keyframes rl-respirar {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes rl-pulso {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+.rl-anillo-a {
+  animation: rl-giro 28s linear infinite;
+  transform-origin: 50% 50%;
+}
+.rl-anillo-b {
+  animation: rl-giro-inverso 18s linear infinite;
+  transform-origin: 50% 50%;
+}
+.rl-flotar {
+  animation: rl-flotar 6s ease-in-out infinite;
+}
+.rl-respirar {
+  animation: rl-respirar 2s ease-in-out infinite;
+}
+.rl-pulso {
+  animation: rl-pulso 1.8s ease-out infinite;
+}
+.rl-linea {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-ambar);
+  box-shadow: 0 0 20px 5px rgb(242 181 68 / 0.5);
+  animation: rl-escaneo 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rl-anillo-a,
+  .rl-anillo-b,
+  .rl-flotar,
+  .rl-respirar,
+  .rl-pulso {
+    animation: none;
+  }
+  .rl-linea {
+    animation-duration: 8s;
+  }
+}

@@ -1,0 +1,26 @@
+# Secretos
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Datos locales: escaneos y fotos
+data/
+
+# Sistema
+.DS_Store
+
+# Claude Code: configuración local
+.claude/settings.local.json
+
+# Originales pesados de las imágenes; la app usa frontend/public/img
+assets/originales/
