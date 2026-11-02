@@ -8,18 +8,11 @@ from datetime import datetime, timezone
 from PIL import Image
 
 from royalens import config  # carga royalens/.env
-from royalens.analysis import Instance
+from royalens.analysis import Instance, dae_class
 from royalens.meta_api import prepare_image
-from royalens.pipeline import analyze
+from royalens.pipeline import analyze, analyze_ripeness
 
-from . import demo, store
-
-ESTADOS = ["verde", "pinton", "maduro", "sobremaduro"]
-
-
-class MaduracionNoConectada(RuntimeError):
-    pass
-
+from . import demo, ejemplos, store
 
 def modo() -> str:
     # Sin valor se usa la API real: un error de clave nunca se disfraza de resultado.
@@ -35,6 +28,10 @@ def _caja(box: tuple[int, int, int, int], size: tuple[int, int]) -> list[float]:
         round(min(right, w) / w, 4),
         round(min(bottom, h) / h, 4),
     ]
+
+
+class EjemploNoExiste(LookupError):
+    pass
 
 
 def _base(tipo: str, lote: int, img: Image.Image) -> dict:
@@ -66,19 +63,25 @@ def _interpretacion_muse(muse: dict) -> dict:
         "recomendacion": muse.get("recomendacion") or "",
         "otras_causas": muse.get("otras_causas_posibles") or [],
         "consejo_foto": muse.get("consejo_foto") or "",
+        "signos_de_roya": muse.get("signos_de_roya"),
+        "calidad_foto": muse.get("calidad_foto"),
+        "cara_visible": muse.get("cara_visible"),
     }
 
 
-async def analizar_roya(image: Image.Image, lote: int) -> dict:
+async def analizar_roya(image: Image.Image, lote: int, visitante: str) -> dict:
     img, _ = prepare_image(image)
     if modo() == "demo":
         r = demo.analizar_roya(img)
         overlay, severidad, lesiones = r["overlay"], r["severidad"], r["lesiones"]
         interpretacion, avisos = r["interpretacion"], r["avisos"]
+        valida, hojas_en_foto = severidad.leaf_pixels > 0, 1
+        clase = dae_class(severidad.percent) if valida else None
     else:
         d = await analyze(img)
         overlay, severidad, lesiones = d.overlay, d.severity, d.lesions
         interpretacion, avisos = _interpretacion_muse(d.muse), d.warnings
+        valida, hojas_en_foto, clase = d.measurable, d.leaves_in_photo, d.dae
 
     escaneo = _base("roya", lote, img)
     nombre_overlay = f"{escaneo['id']}_overlay.jpg"
@@ -86,28 +89,32 @@ async def analizar_roya(image: Image.Image, lote: int) -> dict:
     escaneo.update(
         overlay_url=f"/media/{nombre_overlay}",
         medicion={
-            "porcentaje": round(severidad.percent, 1),
-            "nivel": severidad.level,
-            "lesiones": severidad.lesion_count,
-            "hoja_detectada": severidad.leaf_pixels > 0,
+            # Sin medición válida no hay cifra: un 0 se leería como una hoja sana.
+            "valida": valida,
+            "porcentaje": round(severidad.percent, 1) if valida else None,
+            "nivel": severidad.level if valida else None,
+            "lesiones": severidad.lesion_count if valida else None,
+            "clase_dae": clase,
+            "hojas_en_foto": hojas_en_foto,
             "confianza": _confianza(lesiones),
         },
         detecciones=[
-            {"id": i.object_id, "caja": _caja(i.box, img.size), "confianza": i.confidence}
-            for i in lesiones
+            # Cada prompt de SAM numera desde cero: el id se asigna aquí para que sea único.
+            {"id": str(n), "caja": _caja(i.box, img.size), "confianza": i.confidence}
+            for n, i in enumerate(lesiones)
         ],
         interpretacion=interpretacion,
         avisos=avisos,
     )
-    return store.guardar(escaneo)
+    return store.guardar(escaneo, visitante)
 
 
 def recomendar_cosecha(pct_maduro: int, pct_sobre: int, total: int) -> dict:
     """Regla fija sobre el conteo: no depende de un modelo de lenguaje."""
     if total == 0:
         return {
-            "titulo": "No se contaron cerezas",
-            "texto": "Toma la foto más cerca del racimo, con buena luz y enfoque.",
+            "titulo": "Sin conteo",
+            "texto": "Tome la foto más cerca del racimo, con buena luz y enfoque.",
         }
     if pct_sobre >= 20:
         return {
@@ -117,38 +124,64 @@ def recomendar_cosecha(pct_maduro: int, pct_sobre: int, total: int) -> dict:
     if pct_maduro >= 50:
         return {
             "titulo": "Buen momento para recolectar",
-            "texto": "Más de la mitad del racimo está en punto. Recoge solo las maduras y vuelve después por las pintonas.",
+            "texto": "Más de la mitad del racimo está en punto. Recoja solo las maduras y vuelva después por las pintonas.",
         }
     return {
         "titulo": "Todavía conviene esperar",
-        "texto": "Menos de la mitad del racimo está en punto. Vuelve a revisarlo en unos días.",
+        "texto": "Menos de la mitad del racimo está en punto. Vuelva a revisarlo más adelante.",
     }
 
 
-async def analizar_maduracion(image: Image.Image, lote: int) -> dict:
+async def analizar_maduracion(image: Image.Image, lote: int, visitante: str) -> dict:
     img, _ = prepare_image(image)
-    if modo() != "demo":
-        raise MaduracionNoConectada(
-            "La maduración todavía no está conectada a SAM 3.1. Usa el modo demo por ahora."
-        )
-    r = demo.analizar_maduracion(img)
-    cerezas = r["cerezas"]
+    if modo() == "demo":
+        r = demo.analizar_maduracion(img)
+        cerezas, avisos, interpretacion = r["cerezas"], r["avisos"], None
+        valida = bool(cerezas)
+    else:
+        d = await analyze_ripeness(img)
+        cerezas = [
+            {"estado": c.state, "caja": c.instance.box, "confianza": c.instance.confidence} for c in d.cherries
+        ]
+        avisos, interpretacion, valida = d.warnings, _interpretacion_muse(d.muse), d.measurable
     total = len(cerezas)
-    conteo = {e: sum(1 for c in cerezas if c["estado"] == e) for e in ESTADOS}
+    conteo = {e: sum(1 for c in cerezas if c["estado"] == e) for e in config.RIPENESS_STATES}
     pct = lambda n: round(100 * n / total) if total else 0
 
     escaneo = _base("maduracion", lote, img)
     escaneo.update(
         medicion={
+            "valida": valida,
             "total": total,
             "conteo": conteo,
-            "porcentaje_maduro": pct(conteo["maduro"]),
+            # Sin conteo válido no hay cifra: un 0 se leería como un racimo verde.
+            "porcentaje_maduro": pct(conteo["maduro"]) if valida else None,
         },
         detecciones=[
-            {"id": c["id"], "estado": c["estado"], "caja": _caja(c["caja"], img.size), "confianza": None}
-            for c in cerezas
+            {"id": str(n), "estado": c["estado"], "caja": _caja(c["caja"], img.size), "confianza": c.get("confianza")}
+            for n, c in enumerate(cerezas)
         ],
         recomendacion=recomendar_cosecha(pct(conteo["maduro"]), pct(conteo["sobremaduro"]), total),
-        avisos=r["avisos"],
+        interpretacion=interpretacion,
+        avisos=avisos,
     )
-    return store.guardar(escaneo)
+    return store.guardar(escaneo, visitante)
+
+
+async def analizar_ejemplo(slug: str, lote: int, visitante: str, al_analizar) -> dict:
+    """Las fotos de ejemplo se analizan una vez: las demás veces no gastan créditos ni tiempo."""
+    ejemplo = ejemplos.buscar(slug)
+    if not ejemplo:
+        raise EjemploNoExiste(slug)
+    guardado = store.ejemplo_guardado(slug, modo(), ejemplos.VERSION_ANALISIS)
+    if not guardado:
+        al_analizar()
+        analizar = analizar_roya if ejemplo["tipo"] == "roya" else analizar_maduracion
+        with Image.open(ejemplos.ruta(slug)) as foto:
+            guardado = await analizar(foto, lote, store.CACHE_EJEMPLOS)
+        guardado = {
+            **guardado,
+            "foto_ejemplo": {"titulo": ejemplo["titulo"], "credito": ejemplo["credito"], "url": ejemplo["url"]},
+        }
+        store.guardar_ejemplo(slug, ejemplos.VERSION_ANALISIS, guardado)
+    return store.copiar_escaneo(guardado, lote, visitante)

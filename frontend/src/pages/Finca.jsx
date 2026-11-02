@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { obtenerResumen } from '../api.js'
+import { borrarMisDatos, obtenerResumen } from '../api.js'
 import { Error, Icono, InsigniaDemo, NavInferior, NavLateral, fechaCorta } from '../components/ui.jsx'
 import { colorNivel } from './Roya.jsx'
 
@@ -32,10 +32,11 @@ function Mapa({ lotes, elegido, setElegido }) {
         <div className="flex flex-wrap gap-3 text-xs text-medio">
           {[
             ['Sin escaneo', '#6F8A7A'],
-            ['Sana', colorNivel('Sin roya visible o trazas')],
+            ['Sana', colorNivel('Sin roya visible')],
             ['Leve', colorNivel('Leve')],
             ['Moderada', colorNivel('Moderada')],
             ['Alta', colorNivel('Alta')],
+            ['Severa', colorNivel('Severa')],
           ].map(([t, c]) => (
             <span key={t} className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-[3px]" style={{ background: c }} />
@@ -141,8 +142,8 @@ function Evolucion({ lote }) {
 }
 
 function etiquetaEscaneo(e) {
-  if (e.tipo === 'roya') return `${e.medicion.porcentaje}% · ${e.medicion.nivel}`
-  return `${e.medicion.porcentaje_maduro}% maduro`
+  if (e.tipo === 'roya') return e.medicion.valida === false ? 'Sin medición' : `${e.medicion.porcentaje}% · ${e.medicion.nivel}`
+  return e.medicion.valida === false ? 'Sin conteo' : `${e.medicion.porcentaje_maduro}% maduro`
 }
 
 export default function Finca() {
@@ -172,7 +173,7 @@ export default function Finca() {
           <header className="flex flex-wrap items-end justify-between gap-3">
             <div className="flex flex-col gap-1">
               <span className="font-mono text-xs tracking-[1.5px] text-ambar uppercase">{hoy}</span>
-              <h1 className="font-sora text-[28px] font-extrabold lg:text-[34px]">Así está tu finca hoy</h1>
+              <h1 className="font-sora text-[28px] font-extrabold lg:text-[34px]">{datos?.es_ejemplo ? 'Así se vería su finca' : 'Así está su finca hoy'}</h1>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <InsigniaDemo modo={datos?.modo} />
@@ -184,11 +185,19 @@ export default function Finca() {
           </header>
 
           {error && <Error mensaje={error} alReintentar={cargar} />}
-          {!datos && !error && <p role="status" className="text-medio">Cargando tu finca…</p>}
+          {!datos && !error && <p role="status" className="text-medio">Cargando su finca…</p>}
 
           {datos && (
             <>
-              {datos.modo === 'demo' && <p className="-mt-2 text-xs text-suave">Este panel mezcla datos de ejemplo con tus pruebas en modo demo.</p>}
+              {datos.es_ejemplo && (
+                <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ambar/50 bg-[#2a220e] px-4 py-3">
+                  <span className="flex items-start gap-3 text-sm text-ambar-claro">
+                    <Icono nombre="alerta" className="mt-0.5 flex-none" />
+                    <span><b>Finca de ejemplo.</b> Estas cifras son ilustrativas, no son mediciones reales. Con su primer escaneo, este panel pasa a mostrar solo sus datos.</span>
+                  </span>
+                  <Link to="/roya" className="text-sm font-bold whitespace-nowrap text-ambar underline underline-offset-4">Hacer mi primer escaneo</Link>
+                </div>
+              )}
               <section aria-label="Resumen" className="grid flex-none grid-cols-2 gap-3 xl:grid-cols-4">
                 <Indicador
                   titulo="Roya promedio"
@@ -234,6 +243,12 @@ export default function Finca() {
                         </Link>
                       </div>
                       <Evolucion lote={lote} />
+                      {lote.muestra.hojas > 0 && (
+                        <p className="border-t border-borde pt-2 text-xs leading-relaxed text-medio">
+                          Últimos 30 días: <b className="text-texto">{lote.muestra.con_roya} de {lote.muestra.hojas} hojas con roya</b> ({lote.muestra.incidencia}%) y severidad media de {lote.muestra.severidad}%.
+                          Orientativo: el monitoreo de Cenicafé evalúa 50 árboles por lote.
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -254,6 +269,23 @@ export default function Finca() {
                         <Link key={e.id} to={`/${e.tipo}/${e.id}`} className={`${clase} hover:text-white`}>{contenido}</Link>
                       )
                     })}
+                    {!datos.es_ejemplo && datos.recientes.length > 0 && (
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm('¿Borrar todos sus escaneos y fotos? No se puede deshacer.')) return
+                          try {
+                            await borrarMisDatos()
+                            setElegido(null)
+                            cargar()
+                          } catch (e) {
+                            setError(e.message)
+                          }
+                        }}
+                        className="min-h-10 self-start py-2 text-xs font-semibold text-medio underline underline-offset-4 hover:text-white"
+                      >
+                        Borrar mis datos
+                      </button>
+                    )}
                   </div>
                 </section>
               </div>

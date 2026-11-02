@@ -1,0 +1,66 @@
+"""Fotos de ejemplo para probar la app sin tener un cafetal cerca."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+RAIZ = Path(__file__).resolve().parent.parent / "frontend"
+# Sube esta versión cuando cambie el análisis: los resultados guardados dejan de usarse.
+VERSION_ANALISIS = "2026-11-01"
+
+EJEMPLOS = [
+    {
+        "slug": "hoja-roya", "tipo": "roya", "titulo": "Hoja con roya", "generada": False,
+        "credito": "Carvalho et al., CC BY 2.5",
+        "url": "https://commons.wikimedia.org/wiki/File:Hemileia_vastatrix_Leaf_symptoms.png",
+    },
+    {
+        "slug": "hoja-sana", "tipo": "roya", "titulo": "Hoja sana", "generada": False,
+        "credito": "SAplants, CC BY-SA 4.0",
+        "url": "https://commons.wikimedia.org/wiki/File:Coffea_arabica_1DS-II_4-5116.jpg",
+    },
+    {
+        "slug": "hoja-otra-mancha", "tipo": "roya", "titulo": "Otra enfermedad", "generada": False,
+        "credito": "Ernani Zimmermann, CC BY-SA 4.0",
+        "url": "https://commons.wikimedia.org/wiki/File:Mancha_de_olho_pardo_01.jpg",
+    },
+    {
+        "slug": "hoja-generada", "tipo": "roya", "titulo": "Roya marcada", "generada": True,
+        "credito": "Imagen generada con IA, no es una foto real", "url": None,
+    },
+    {
+        "slug": "racimo-mixto", "tipo": "maduracion", "titulo": "Racimo mixto", "generada": False,
+        "credito": "U. S. Fish and Wildlife Service, dominio público",
+        "url": "https://commons.wikimedia.org/wiki/File:Clumps_of_coffee_berries_growing_on_a_tree,_by_Brian_Smith.jpg",
+    },
+    {
+        "slug": "racimo-verde", "tipo": "maduracion", "titulo": "Racimo verde", "generada": False,
+        "credito": "Dinkum, CC0",
+        "url": "https://commons.wikimedia.org/wiki/File:Coffea_arabica_serres_du_Luxembourg.jpg",
+    },
+    {
+        "slug": "racimo-rojo", "tipo": "maduracion", "titulo": "Racimo maduro", "generada": False,
+        "credito": "Kızıldeniz, CC BY-SA 4.0",
+        "url": "https://commons.wikimedia.org/wiki/File:Coffea_arabica_3.jpg",
+    },
+    {
+        "slug": "racimo-generado", "tipo": "maduracion", "titulo": "Todos los estados", "generada": True,
+        "credito": "Imagen generada con IA, no es una foto real", "url": None,
+    },
+]
+
+
+def publicos(tipo: str) -> list[dict]:
+    return [{**e, "imagen_url": f"/img/ejemplos/{e['slug']}.jpg"} for e in EJEMPLOS if e["tipo"] == tipo]
+
+
+def buscar(slug: str) -> dict | None:
+    return next((e for e in EJEMPLOS if e["slug"] == slug), None)
+
+
+def ruta(slug: str) -> Path:
+    for carpeta in ("dist", "public"):
+        archivo = RAIZ / carpeta / "img" / "ejemplos" / f"{slug}.jpg"
+        if archivo.exists():
+            return archivo
+    raise FileNotFoundError(slug)

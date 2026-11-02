@@ -24,3 +24,6 @@ data/
 
 # Originales pesados de las imágenes; la app usa frontend/public/img
 assets/originales/
+
+# Fotos de prueba de terceros; ver fotos/FUENTES.md
+fotos/

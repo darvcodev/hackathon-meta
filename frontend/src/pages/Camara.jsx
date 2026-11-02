@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { analizar } from '../api.js'
-import { Error, Icono, InsigniaDemo, LOTES, useModo } from '../components/ui.jsx'
+import { AVISO_FOTOS, Error, Icono, InsigniaDemo, LOTES, useModo } from '../components/ui.jsx'
 
-const GUIA = { roya: 'Una sola hoja · muestra el envés', maduracion: 'Un racimo · de cerca y de frente' }
+const GUIA = { roya: 'Una sola hoja · por el envés', maduracion: 'Un racimo · de cerca y de frente' }
 
 export default function Camara() {
   const [parametros] = useSearchParams()
@@ -96,7 +96,7 @@ export default function Camara() {
           <InsigniaDemo modo={modo} />
           {!enVivo && !analizando && (
             <span className="rounded-xl bg-bosque/80 px-3 py-1.5 text-center text-xs text-medio">
-              Imagen de referencia. Toca el botón para abrir la cámara o elegir una foto.
+              Imagen de referencia. Toque el botón para abrir la cámara o elegir una foto.
             </span>
           )}
         </div>
@@ -107,7 +107,7 @@ export default function Camara() {
               <Error mensaje={error} />
             </div>
           )}
-          <div role="group" aria-label="Qué vas a escanear" className="flex rounded-full bg-[#12291d] p-1">
+          <div role="group" aria-label="Qué va a escanear" className="flex rounded-full bg-[#12291d] p-1">
             {[
               ['roya', 'Hoja · roya'],
               ['maduracion', 'Racimo · maduración'],
@@ -149,6 +149,7 @@ export default function Camara() {
               <Icono nombre="casa" tam={22} />
             </Link>
           </div>
+          <p className="text-center text-[11px] leading-snug text-suave">{AVISO_FOTOS}</p>
         </div>
 
         <input

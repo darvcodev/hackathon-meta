@@ -59,6 +59,117 @@ def union(instances: list[Instance], shape: tuple[int, int]) -> np.ndarray:
     return out
 
 
+def main_leaf(leaves: list[Instance], shape: tuple[int, int]) -> Instance | None:
+    """La hoja que se mide cuando hay varias: grande y cerca del centro de la foto."""
+    height, width = shape
+    best, best_score = None, 0.0
+    for leaf in leaves:
+        area = int(leaf.mask.sum())
+        if not area:
+            continue
+        ys, xs = np.nonzero(leaf.mask)
+        distance = np.hypot(xs.mean() / width - 0.5, ys.mean() / height - 0.5) / np.hypot(0.5, 0.5)
+        score = area * (1 - distance)
+        if score > best_score:
+            best, best_score = leaf, score
+    return best
+
+
+def has_rust_color(rgb: np.ndarray, mask: np.ndarray) -> bool:
+    """La pústula de roya es naranja o amarilla y saturada; otras manchas son pardas o grises."""
+    pixels = rgb[mask]
+    if not len(pixels):
+        return False
+    hsv = np.asarray(Image.fromarray(pixels[None, ...]).convert("HSV"))[0]
+    hue = float(np.median(hsv[:, 0])) * 360 / 255
+    saturation = float(np.median(hsv[:, 1])) / 255
+    low, high = config.RUST_HUE_RANGE
+    return low <= hue <= high and saturation >= config.RUST_MIN_SATURATION
+
+
+def rust_lesions(
+    image: Image.Image, leaf_mask: np.ndarray, candidates: list[Instance]
+) -> tuple[list[Instance], int]:
+    """Deja una instancia por lesión y separa las que no tienen color de roya.
+
+    Devuelve las lesiones válidas y cuántas se descartaron por color.
+    """
+    rgb = np.asarray(image.convert("RGB"))
+    kept: list[Instance] = []
+    covered = np.zeros_like(leaf_mask)
+    discarded = 0
+    for inst in sorted(candidates, key=lambda i: int(i.mask.sum()), reverse=True):
+        inside = inst.mask & leaf_mask
+        area = int(inst.mask.sum())
+        if not area or inside.sum() < 0.5 * area:
+            continue
+        # Otro prompt puede devolver la misma lesión.
+        if (inside & covered).sum() >= 0.5 * inside.sum():
+            continue
+        if not has_rust_color(rgb, inside):
+            discarded += 1
+            continue
+        kept.append(inst)
+        covered |= inside
+    return kept, discarded
+
+
+def ripeness(rgb: np.ndarray, mask: np.ndarray) -> str:
+    """Estado de una cereza según los colores dentro de su máscara."""
+    pixels = rgb[mask]
+    hsv = np.asarray(Image.fromarray(pixels[None, ...]).convert("HSV"))[0].astype(np.float32)
+    hue, saturation, value = hsv[:, 0] * 360 / 255, hsv[:, 1] / 255, hsv[:, 2] / 255
+
+    # Sin brillos ni reflejos del cielo, que no dicen nada del color de la piel.
+    skin = saturation >= 0.25
+    if skin.sum() < 0.2 * len(pixels):
+        return "pinton"
+    hue, value = hue[skin], value[skin]
+
+    red = (hue >= config.RED_HUE[0]) | (hue <= config.RED_HUE[1])
+    green = (hue >= config.GREEN_HUE[0]) & (hue <= config.GREEN_HUE[1])
+    if red.mean() >= config.RIPENESS_SHARE:
+        dark = float((value[red] < config.OVERRIPE_MAX_VALUE).mean())
+        return "sobremaduro" if dark >= 0.5 else "maduro"
+    if green.mean() >= config.RIPENESS_SHARE:
+        return "verde"
+    return "pinton"
+
+
+def _boxes_touch(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> bool:
+    return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+
+
+def cherries_from(instances: list[Instance]) -> list[Instance]:
+    """Quita duplicados y los frutos diminutos del fondo."""
+    areas = [int(i.mask.sum()) for i in instances if i.mask.any()]
+    if not areas:
+        return []
+    minimum = config.MIN_CHERRY_RATIO * float(np.median(areas))
+    kept: list[Instance] = []
+    for inst in sorted(instances, key=lambda i: int(i.mask.sum()), reverse=True):
+        area = int(inst.mask.sum())
+        if area < minimum:
+            continue
+        if any(
+            _boxes_touch(inst.box, other.box) and (inst.mask & other.mask).sum() >= config.CHERRY_DUPLICATE_OVERLAP * area
+            for other in kept
+        ):
+            continue
+        kept.append(inst)
+    return kept
+
+
+def dae_class(percent: float) -> int | None:
+    """Marca de clase del Diagrama de Área Estándar de Cenicafé para ese porcentaje."""
+    if percent < config.SEVERITY_LEVELS[0][0]:
+        return None
+    for upper, mark in config.DAE_CLASSES:
+        if percent < upper:
+            return mark
+    return config.DAE_CLASSES[-1][1]
+
+
 def classify(percent: float) -> tuple[str, str]:
     for upper, label, color in config.SEVERITY_LEVELS:
         if percent < upper:

@@ -8,12 +8,14 @@ Formatos tomados de la documentación oficial:
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import json
 import os
 import re
 
+import numpy as np
 from openai import AsyncOpenAI
 from PIL import Image, ImageOps
 
@@ -82,6 +84,47 @@ async def segment(
     return await instances_from_events(events, size, min_confidence)
 
 
+async def segment_tiled(
+    client: AsyncOpenAI,
+    image: Image.Image,
+    prompt: str,
+    min_confidence: float = config.MIN_CONFIDENCE,
+) -> list[Instance]:
+    """SAM sobre la foto completa y sus cuatro cuadrantes, ya en coordenadas de la foto."""
+    width, height = image.size
+    tile_w = int(width * (0.5 + config.TILE_OVERLAP / 2))
+    tile_h = int(height * (0.5 + config.TILE_OVERLAP / 2))
+    origins = [(0, 0), (width - tile_w, 0), (0, height - tile_h), (width - tile_w, height - tile_h)]
+
+    def data_url_of(img: Image.Image) -> str:
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=90)
+        return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+
+    whole, *tiles = await asyncio.gather(
+        segment(client, data_url_of(image), prompt, image.size, min_confidence),
+        *(
+            segment(client, data_url_of(image.crop((x, y, x + tile_w, y + tile_h))), prompt, (tile_w, tile_h), min_confidence)
+            for x, y in origins
+        ),
+    )
+
+    found = list(whole)
+    for (x, y), group in zip(origins, tiles):
+        for inst in group:
+            left, top, right, bottom = inst.box
+            # Una cereza cortada por el borde interior aparece entera en el cuadrante vecino.
+            cut = (x > 0 and left <= 1) or (y > 0 and top <= 1) or (
+                x == 0 and right >= tile_w - 1
+            ) or (y == 0 and bottom >= tile_h - 1)
+            if cut:
+                continue
+            mask = np.zeros((height, width), dtype=bool)
+            mask[y : y + tile_h, x : x + tile_w] = inst.mask
+            found.append(Instance(inst.object_id, mask, (left + x, top + y, right + x, bottom + y), inst.confidence))
+    return found
+
+
 async def instances_from_events(events, size, min_confidence) -> list[Instance]:
     """Convierte el stream de SAM en máscaras de imagen completa (separado para tests)."""
     width, height = size
@@ -120,25 +163,52 @@ async def instances_from_events(events, size, min_confidence) -> list[Instance]:
 
 DIAGNOSIS_PROMPT = """Eres un asistente agronómico para caficultores colombianos.
 Analiza la foto. Una herramienta de segmentación ya MIDIÓ lo siguiente:
-- Área de hoja detectada: {leaf_found}
-- Lesiones tipo roya detectadas sobre la hoja: {lesion_count}
-- Porcentaje del área de la hoja con lesiones: {percent:.1f}%
+- Se pudo medir una hoja: {leaf_found}
+- Lesiones con color de roya sobre la hoja: {lesion_count}
+- Porcentaje del área de la hoja con esas lesiones: {percent:.1f}%
 - Nivel según la escala de la app: {level}
 
+Si no se pudo medir una hoja, ignora las cifras y no menciones porcentajes.
 No cambies ni inventes estas cifras. Tu trabajo es interpretar lo que se VE.
+La roya forma pústulas de polvillo naranja, sobre todo en el envés. Marca
+"signos_de_roya" como true solo si ves ese polvillo o manchas amarillas compatibles;
+una mancha parda o gris con centro claro no es roya.
 Responde SOLO con un objeto JSON válido, sin texto adicional, con estas claves:
 {{
   "es_hoja_de_cafe": true o false,
   "calidad_foto": "buena" | "regular" | "mala",
+  "cara_visible": "haz" | "enves" | "no se distingue",
   "signos_de_roya": true o false,
   "lo_que_se_ve": "1-2 frases describiendo manchas, color y ubicación (haz o envés)",
   "otras_causas_posibles": ["otras enfermedades o daños que podrían confundirse"],
   "recomendacion": "2-3 frases en lenguaje sencillo para el caficultor",
   "consejo_foto": "cómo tomar una mejor foto si hace falta, o cadena vacía"
 }}
-Reglas: no des dosis ni marcas de productos químicos; si recomiendas manejo,
+Reglas: trata al caficultor de usted, con respeto y sin apodos, y escribe con naturalidad: la hoja es la que
+tiene las manchas, no "usted". No inventes plazos en días
+ni otras cifras. No des dosis ni marcas de productos químicos; si recomiendas manejo,
 sugiere consultar al extensionista del Comité de Cafeteros o a Cenicafé.
 Si la foto no es una hoja de café, dilo y no des diagnóstico."""
+
+
+RIPENESS_PROMPT = """Eres un asistente agronómico para caficultores colombianos.
+Analiza la foto. Una herramienta de segmentación ya CONTÓ estas cerezas:
+- Total: {total}
+- Verdes: {verde}. Pintonas: {pinton}. Maduras: {maduro}. Sobremaduras: {sobremaduro}
+
+No cambies ni inventes estas cifras. Tu trabajo es interpretar lo que se VE.
+Responde SOLO con un objeto JSON válido, sin texto adicional, con estas claves:
+{{
+  "es_racimo_de_cafe": true o false,
+  "calidad_foto": "buena" | "regular" | "mala",
+  "lo_que_se_ve": "1-2 frases sobre el estado de las cerezas, en lenguaje sencillo",
+  "recomendacion": "2-3 frases prácticas sobre la recolección selectiva, en lenguaje de finca",
+  "consejo_foto": "cómo tomar una mejor foto si hace falta, o cadena vacía"
+}}
+"es_racimo_de_cafe" es true solo si se ven cerezas de café en la rama.
+Trata al caficultor de usted, con respeto y sin apodos, y escribe con naturalidad. No inventes plazos en días ni otras cifras.
+Algunas variedades maduran amarillas: si lo parece, adviértelo en "lo_que_se_ve".
+Si la foto no es un racimo de café, dilo y no des recomendación de cosecha."""
 
 
 def _extract_json(text: str) -> dict | None:
@@ -171,6 +241,19 @@ async def diagnose(
         model=config.MUSE_MODEL,
         input=_user_message(prompt, data_url),
     )
+    return _muse_json(response)
+
+
+async def interpret_ripeness(client: AsyncOpenAI, data_url: str, counts: dict, total: int) -> dict:
+    """Muse Spark confirma que es un racimo y explica el conteo sin cambiarlo."""
+    response = await client.responses.create(
+        model=config.MUSE_MODEL,
+        input=_user_message(RIPENESS_PROMPT.format(total=total, **counts), data_url),
+    )
+    return _muse_json(response)
+
+
+def _muse_json(response) -> dict:
     text = response.output_text or ""
     parsed = _extract_json(text)
     if parsed is None:

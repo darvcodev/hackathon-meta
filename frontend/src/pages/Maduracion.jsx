@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { analizar, fotoDeEjemplo, obtenerEscaneo } from '../api.js'
-import { BarraPantalla, BotonesFoto, Error, Foto, Icono, NavInferior, SelectorLote, Tarjeta, useModo } from '../components/ui.jsx'
+import { analizar, analizarEjemplo, obtenerEscaneo } from '../api.js'
+import { AVISO_FOTOS, BarraPantalla, BotonesFoto, CreditoFoto, Error, Foto, GaleriaEjemplos, Icono, NavInferior, SelectorLote, Tarjeta, useModo } from '../components/ui.jsx'
 
 const FOTO_EJEMPLO = '/img/maduracion.jpg'
 const ESTADOS = {
@@ -72,11 +72,24 @@ function Detecciones({ escaneo, filtro }) {
 }
 
 function Resultado({ escaneo, modo }) {
-  const { medicion, recomendacion } = escaneo
+  const { medicion, recomendacion, interpretacion, avisos } = escaneo
   const total = medicion.total
+  const valida = medicion.valida !== false
   return (
     <section aria-label="Resultado de maduración" className="flex min-h-0 flex-col gap-3 lg:overflow-y-auto">
-      <div className="flex flex-none flex-col gap-3.5 rounded-[22px] border border-borde bg-tarjeta p-6">
+      {avisos.map((aviso) => (
+        <div key={aviso} role="status" className="flex flex-none items-start gap-3 rounded-2xl border border-ambar/50 bg-[#2a220e] px-4 py-3 text-sm text-ambar-claro">
+          <Icono nombre="alerta" className="mt-0.5 flex-none" />
+          {aviso}
+        </div>
+      ))}
+      {!valida && (
+        <div className="flex flex-none flex-col gap-1 rounded-[22px] border border-borde bg-tarjeta px-6 py-5">
+          <span className="font-sora text-xl font-extrabold">Sin conteo</span>
+          <span className="text-sm text-medio">Esta foto no se cuenta en el historial del lote.</span>
+        </div>
+      )}
+      {valida && <div className="flex flex-none flex-col gap-3.5 rounded-[22px] border border-borde bg-tarjeta p-6">
         <div className="flex items-baseline justify-between gap-3">
           <span className="text-sm text-suave">Cerezas en punto de cosecha</span>
           <span className="font-mono text-xs text-medio">MADURAS / TOTAL</span>
@@ -109,20 +122,38 @@ function Resultado({ escaneo, modo }) {
             </div>
           ))}
         </div>
-      </div>
-      <div className="flex flex-none items-center gap-4 rounded-[20px] border border-[#7a2a22] bg-[#2a0f0d] px-5 py-4">
+      </div>}
+      {valida && <div className="flex flex-none items-center gap-4 rounded-[20px] border border-[#7a2a22] bg-[#2a0f0d] px-5 py-4">
         <Icono nombre="calendario" tam={36} className="flex-none text-[#ff8a7a]" />
         <div className="flex flex-col gap-1">
           <span className="font-sora text-[17px] font-semibold text-[#ffd3cc]">{recomendacion.titulo}</span>
           <span className="text-sm leading-relaxed text-[#f2d6d1]">{recomendacion.texto}</span>
         </div>
-      </div>
-      <Tarjeta titulo="Por qué importa" className="flex-none">
-        <p className="text-[15px] leading-relaxed text-claro">
-          Recoger cerezas verdes o sobremaduras baja la calidad en taza. Contar por racimo ayuda a planear los pases de cosecha y los recolectores.
-        </p>
-      </Tarjeta>
+      </div>}
+      {interpretacion ? (
+        <>
+          <Tarjeta titulo="Lo que se ve" className="flex-none">
+            <p className="text-[15px] leading-relaxed text-claro">{interpretacion.lo_que_se_ve || 'Sin descripción.'}</p>
+          </Tarjeta>
+          {interpretacion.recomendacion && (
+            <Tarjeta titulo="Qué hacer" className="flex-none">
+              <p className="text-[15px] leading-relaxed text-claro">{interpretacion.recomendacion}</p>
+            </Tarjeta>
+          )}
+          {interpretacion.consejo_foto && <p className="flex-none text-sm text-medio">{interpretacion.consejo_foto}</p>}
+        </>
+      ) : (
+        <Tarjeta titulo="Por qué importa" className="flex-none">
+          <p className="text-[15px] leading-relaxed text-claro">
+            Recoger cerezas verdes o sobremaduras baja la calidad en taza. Contar por racimo ayuda a planear los pases de cosecha y los recolectores.
+          </p>
+        </Tarjeta>
+      )}
       <div className="flex-1" />
+      <Link to={`/asistente?escaneo=${escaneo.id}&lote=${escaneo.lote}`} className="flex h-11 flex-none items-center justify-center gap-2 rounded-xl border border-borde-fuerte px-4 text-sm font-semibold hover:border-ambar">
+        <Icono nombre="chat" tam={18} />
+        Preguntar sobre este resultado
+      </Link>
       <div className="flex flex-none flex-wrap gap-3">
         <Link to="/finca" className="flex h-[52px] flex-1 items-center justify-center rounded-xl bg-ambar px-4 font-bold whitespace-nowrap text-[#1a1206] hover:bg-[#ffc85e]">
           Ver en Mi finca · Lote {escaneo.lote}
@@ -131,6 +162,7 @@ function Resultado({ escaneo, modo }) {
           Escanear otro racimo
         </Link>
       </div>
+      <CreditoFoto foto={escaneo.foto_ejemplo} />
       {modo === 'demo' && <p className="flex-none text-xs leading-relaxed text-suave">Conteo local por color para probar la interfaz. Puede fallar con cerezas tapadas o verdes sobre hojas.</p>}
     </section>
   )
@@ -147,6 +179,7 @@ export default function Maduracion() {
   const [vista, setVista] = useState(FOTO_EJEMPLO)
   const [filtro, setFiltro] = useState('todas')
   const [lote, setLote] = useState(Number(parametros.get('lote')) || 2)
+  const [activo, setActivo] = useState(null)
 
   useEffect(() => {
     setError(null)
@@ -179,11 +212,19 @@ export default function Maduracion() {
     }
   }
 
-  async function usarEjemplo() {
+  async function usarEjemplo(ejemplo) {
+    setVista(ejemplo.imagen_url)
+    setActivo(ejemplo.slug)
+    setError(null)
+    setAnalizando(true)
     try {
-      await procesar(await fotoDeEjemplo(FOTO_EJEMPLO))
+      const resultado = await analizarEjemplo(ejemplo.slug, lote)
+      navegar(`/maduracion/${resultado.id}`)
     } catch (e) {
       setError(e.message)
+    } finally {
+      setAnalizando(false)
+      setActivo(null)
     }
   }
 
@@ -209,30 +250,24 @@ export default function Maduracion() {
           ) : (
             <>
               <section className="relative min-h-[360px] overflow-hidden rounded-3xl border border-borde bg-visor">
-                <img src={vista} alt={analizando ? 'Foto que se está analizando' : 'Racimo de café, foto de ejemplo'} className="absolute inset-0 size-full object-contain" />
+                <img src={vista} alt={analizando ? 'Foto que se está analizando' : 'Racimo de café'} className="absolute inset-0 size-full object-contain" />
                 {analizando && <div className="rl-linea" />}
                 <span className="absolute top-4 left-4 rounded-lg bg-bosque/85 px-3 py-1.5 font-mono text-xs text-ambar-claro">
-                  {analizando ? 'ANALIZANDO…' : 'FOTO DE EJEMPLO'}
+                  {analizando ? 'ANALIZANDO…' : 'IMAGEN GENERADA CON IA'}
                 </span>
               </section>
-              <section className="flex flex-col gap-4">
+              <section className="flex flex-col gap-4 lg:overflow-y-auto">
                 <div className="flex flex-col gap-2">
-                  <h2 className="font-sora text-2xl font-extrabold">Escanea un racimo</h2>
-                  <p className="leading-relaxed text-medio">Toma la foto de cerca y de frente. La app cuenta las cerezas por estado y te dice si ya conviene recolectar.</p>
+                  <h2 className="font-sora text-2xl font-extrabold">Escanee un racimo</h2>
+                  <p className="leading-relaxed text-medio">Tome la foto de cerca y de frente. La app cuenta las cerezas por estado y le dice si ya conviene recolectar.</p>
                 </div>
                 {error && <Error mensaje={error} />}
                 <SelectorLote valor={lote} alCambiar={setLote} deshabilitado={analizando} />
-                <button
-                  disabled={analizando}
-                  onClick={usarEjemplo}
-                  className="flex h-14 items-center justify-center gap-2.5 rounded-[14px] bg-ambar px-6 font-bold text-[#1a1206] hover:bg-[#ffc85e] disabled:opacity-60"
-                >
-                  <Icono nombre="cerezas" />
-                  {analizando ? 'Contando cerezas…' : 'Analizar la foto de ejemplo'}
-                </button>
                 <div className="flex flex-wrap gap-3">
                   <BotonesFoto tipo="maduracion" alElegir={procesar} deshabilitado={analizando} />
                 </div>
+                <GaleriaEjemplos tipo="maduracion" activo={activo} deshabilitado={analizando} alElegir={usarEjemplo} />
+                <p className="text-xs leading-relaxed text-suave">{AVISO_FOTOS}</p>
               </section>
             </>
           )}

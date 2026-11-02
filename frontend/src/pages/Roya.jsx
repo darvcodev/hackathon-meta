@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { analizar, fotoDeEjemplo, obtenerEscaneo } from '../api.js'
-import { BarraPantalla, BotonesFoto, Error, Foto, Icono, NavInferior, SelectorLote, Tarjeta, useModo } from '../components/ui.jsx'
+import { analizar, analizarEjemplo, obtenerEscaneo } from '../api.js'
+import { AVISO_FOTOS, BarraPantalla, BotonesFoto, CreditoFoto, Error, Foto, GaleriaEjemplos, Icono, NavInferior, SelectorLote, Tarjeta, useModo } from '../components/ui.jsx'
 
 const FOTO_EJEMPLO = '/img/escaner-roya.jpg'
 const PASOS = ['Hoja recortada', 'Lesiones segmentadas', 'Área medida', 'Explicado']
 const LARGO_ARCO = 219.9
+const DAE_CENICAFE = 'https://biblioteca.cenicafe.org/bitstream/10778/4244/1/avt0498.pdf'
 
 export function colorNivel(nivel) {
   return (
     {
-      'Sin roya visible o trazas': '#5FCB7E',
+      'Sin roya visible': '#5FCB7E',
       Leve: '#E9B23B',
       Moderada: '#F0A04B',
       Alta: '#E3632D',
@@ -45,6 +46,13 @@ function Pasos({ activo }) {
 function Comparador({ escaneo }) {
   const [corte, setCorte] = useState(55)
   const area = useRef(null)
+  if (!escaneo.medicion.valida) {
+    return (
+      <section aria-label="Foto enviada" className="relative min-h-[320px] flex-1 overflow-hidden rounded-3xl border border-borde bg-visor">
+        <Foto src={escaneo.imagen_url} ancho={escaneo.ancho} alto={escaneo.alto} alt="Foto enviada, sin medición" />
+      </section>
+    )
+  }
   const moverA = (e) => {
     const r = area.current.getBoundingClientRect()
     setCorte(Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100)))
@@ -97,7 +105,7 @@ function Comparador({ escaneo }) {
         <span className="absolute top-4 right-4 rounded-lg bg-bosque/85 px-3 py-1.5 font-mono text-xs">FOTO ORIGINAL</span>
       </div>
       <label className="flex flex-none items-center gap-4 text-sm text-medio">
-        <span className="flex-none">Desliza para comparar</span>
+        <span className="flex-none">Deslice para comparar</span>
         <input
           type="range"
           min="0"
@@ -139,6 +147,10 @@ function Resultado({ escaneo, modo }) {
   const { medicion, interpretacion, avisos } = escaneo
   const datos = [`${medicion.lesiones} LESIONES`]
   if (medicion.confianza !== null) datos.push(`CONFIANZA SAM ${medicion.confianza}`)
+  const muse = []
+  if (interpretacion.signos_de_roya != null) muse.push(`Signos de roya: ${interpretacion.signos_de_roya ? 'sí' : 'no'}`)
+  if (interpretacion.calidad_foto) muse.push(`Calidad de la foto: ${interpretacion.calidad_foto}`)
+  if (interpretacion.cara_visible === 'haz' || interpretacion.cara_visible === 'enves') muse.push(`Cara visible: ${interpretacion.cara_visible === 'enves' ? 'envés' : 'haz'}`)
   return (
     <section aria-label="Resultado" className="flex min-h-0 flex-col gap-3 lg:overflow-y-auto">
       {avisos.map((aviso) => (
@@ -147,19 +159,37 @@ function Resultado({ escaneo, modo }) {
           {aviso}
         </div>
       ))}
-      {medicion.hoja_detectada ? (
+      {medicion.valida ? (
         <div className="flex flex-none flex-wrap items-center gap-5 rounded-[22px] border border-borde bg-tarjeta px-6 py-5">
           <Medidor medicion={medicion} />
           <div className="flex flex-col gap-1.5">
-            <span className="text-[13px] text-suave">Hoja afectada · medido con máscaras</span>
+            <span className="text-[13px] text-suave">Hoja afectada · estimado con máscaras de SAM</span>
             <span className="flex items-center gap-2 font-sora text-2xl font-extrabold">
               <span className="size-3 rounded-full" style={{ background: colorNivel(medicion.nivel) }} />
               {medicion.nivel}
             </span>
             <span className="font-mono text-xs text-medio">{datos.join(' · ')}</span>
+            {medicion.clase_dae !== null && (
+              <span className="text-xs leading-relaxed text-medio">
+                Equivale a la clase de {medicion.clase_dae}% del{' '}
+                <a href={DAE_CENICAFE} target="_blank" rel="noreferrer" className="underline hover:text-texto">diagrama de Cenicafé</a>. Nivel orientativo.
+              </span>
+            )}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="flex flex-none flex-col gap-1 rounded-[22px] border border-borde bg-tarjeta px-6 py-5">
+          <span className="font-sora text-xl font-extrabold">Sin medición</span>
+          <span className="text-sm text-medio">Esta foto no se cuenta en el historial del lote.</span>
+        </div>
+      )}
+      {muse.length > 0 && (
+        <div className="flex flex-none flex-wrap gap-2 text-xs text-claro">
+          {muse.map((m) => (
+            <span key={m} className="rounded-full border border-borde bg-tarjeta px-3 py-1.5">{m}</span>
+          ))}
+        </div>
+      )}
       <Tarjeta titulo="Lo que se ve" className="flex-none">
         <p className="text-[15px] leading-relaxed text-claro">{interpretacion.lo_que_se_ve || 'Sin descripción.'}</p>
       </Tarjeta>
@@ -173,6 +203,10 @@ function Resultado({ escaneo, modo }) {
       )}
       {interpretacion.consejo_foto && <p className="flex-none text-sm text-medio">{interpretacion.consejo_foto}</p>}
       <div className="flex-1" />
+      <Link to={`/asistente?escaneo=${escaneo.id}&lote=${escaneo.lote}`} className="flex h-11 flex-none items-center justify-center gap-2 rounded-xl border border-borde-fuerte px-4 text-sm font-semibold hover:border-ambar">
+        <Icono nombre="chat" tam={18} />
+        Preguntar sobre este resultado
+      </Link>
       <div className="flex flex-none flex-wrap gap-3">
         <Link to="/finca" className="flex h-[52px] flex-1 items-center justify-center rounded-xl bg-ambar px-4 font-bold whitespace-nowrap text-[#1a1206] hover:bg-[#ffc85e]">
           Ver en Mi finca · Lote {escaneo.lote}
@@ -181,39 +215,34 @@ function Resultado({ escaneo, modo }) {
           Escanear otra hoja
         </Link>
       </div>
+      <CreditoFoto foto={escaneo.foto_ejemplo} />
       {modo === 'demo' && <p className="flex-none text-xs leading-relaxed text-suave">Medición local por color para probar la interfaz. No es un diagnóstico.</p>}
     </section>
   )
 }
 
-function Preparacion({ vista, analizando, error, lote, setLote, alElegir, alEjemplo }) {
+function Preparacion({ vista, analizando, error, lote, setLote, alElegir, alEjemplo, activo }) {
   return (
     <div className="grid min-h-0 flex-1 gap-6 p-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:px-9 lg:py-6">
       <section className="relative min-h-[360px] overflow-hidden rounded-3xl border border-borde bg-visor">
-        <img src={vista} alt={analizando ? 'Foto que se está analizando' : 'Hoja de café con roya, foto de ejemplo'} className="absolute inset-0 size-full object-contain" />
+        <img src={vista} alt={analizando ? 'Foto que se está analizando' : 'Hoja de café con roya'} className="absolute inset-0 size-full object-contain" />
         {analizando && <div className="rl-linea" />}
         <span className="absolute top-4 left-4 rounded-lg bg-bosque/85 px-3 py-1.5 font-mono text-xs text-ambar-claro">
-          {analizando ? 'ANALIZANDO…' : 'FOTO DE EJEMPLO'}
+          {analizando ? 'ANALIZANDO…' : 'IMAGEN GENERADA CON IA'}
         </span>
       </section>
-      <section className="flex flex-col gap-4">
+      <section className="flex flex-col gap-4 lg:overflow-y-auto">
         <div className="flex flex-col gap-2">
-          <h2 className="font-sora text-2xl font-extrabold">Escanea una hoja</h2>
+          <h2 className="font-sora text-2xl font-extrabold">Escanee una hoja</h2>
           <p className="leading-relaxed text-medio">Una sola hoja, de cerca, mostrando el envés y con buena luz. La app mide qué porcentaje está afectado.</p>
         </div>
         {error && <Error mensaje={error} />}
         <SelectorLote valor={lote} alCambiar={setLote} deshabilitado={analizando} />
-        <button
-          disabled={analizando}
-          onClick={alEjemplo}
-          className="flex h-14 items-center justify-center gap-2.5 rounded-[14px] bg-ambar px-6 font-bold text-[#1a1206] hover:bg-[#ffc85e] disabled:opacity-60"
-        >
-          <Icono nombre="hoja" />
-          {analizando ? 'Analizando la foto…' : 'Analizar la foto de ejemplo'}
-        </button>
         <div className="flex flex-wrap gap-3">
           <BotonesFoto tipo="roya" alElegir={alElegir} deshabilitado={analizando} />
         </div>
+        <GaleriaEjemplos tipo="roya" activo={activo} deshabilitado={analizando} alElegir={alEjemplo} />
+        <p className="text-xs leading-relaxed text-suave">{AVISO_FOTOS}</p>
       </section>
     </div>
   )
@@ -230,6 +259,7 @@ export default function Roya() {
   const [vista, setVista] = useState(FOTO_EJEMPLO)
   const [lote, setLote] = useState(Number(parametros.get('lote')) || 1)
   const [paso, setPaso] = useState(0)
+  const [activo, setActivo] = useState(null)
 
   useEffect(() => {
     setError(null)
@@ -268,11 +298,19 @@ export default function Roya() {
     }
   }
 
-  async function usarEjemplo() {
+  async function usarEjemplo(ejemplo) {
+    setVista(ejemplo.imagen_url)
+    setActivo(ejemplo.slug)
+    setError(null)
+    setAnalizando(true)
     try {
-      await procesar(await fotoDeEjemplo(FOTO_EJEMPLO))
+      const resultado = await analizarEjemplo(ejemplo.slug, lote)
+      navegar(`/roya/${resultado.id}`)
     } catch (e) {
       setError(e.message)
+    } finally {
+      setAnalizando(false)
+      setActivo(null)
     }
   }
 
@@ -304,6 +342,7 @@ export default function Roya() {
           setLote={setLote}
           alElegir={procesar}
           alEjemplo={usarEjemplo}
+          activo={activo}
         />
       )}
       <NavInferior />

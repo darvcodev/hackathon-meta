@@ -18,7 +18,7 @@ TEXTO_LESION = (
 )
 TEXTO_RECOMENDACION = (
     "Texto de ejemplo del modo demo. Con la API real, aquí aparece qué hacer en "
-    "lenguaje de finca. Ante cualquier duda, consulta a tu extensionista del "
+    "lenguaje de finca. Ante cualquier duda, consulte a su extensionista del "
     "Comité de Cafeteros o a Cenicafé."
 )
 

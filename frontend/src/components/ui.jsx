@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { obtenerEstado } from '../api.js'
+import { obtenerEjemplos, obtenerEstado } from '../api.js'
 
 export const LOTES = [1, 2, 3, 4]
 
@@ -43,6 +43,8 @@ const TRAZOS = {
   suelo: <path d="M3 17h18M5 21h14M12 17V7M12 11c-3 0-5-2-5-5 3 0 5 2 5 5ZM12 9c2.5 0 4-1.6 4-4-2.5 0-4 1.6-4 4Z" />,
   alerta: <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />,
   check: <path d="M5 12l5 5L20 7" />,
+  chat: <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />,
+  enviar: <path d="M12 19V5M5 12l7-7 7 7" />,
   calendario: (
     <>
       <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -195,6 +197,51 @@ export function Foto({ src, ancho, alto, alt, children }) {
   )
 }
 
+export const AVISO_FOTOS = 'Sus fotos se envían a los modelos de Meta para el análisis y se guardan 30 días para su historial. Puede borrarlas en Mi finca.'
+
+export function CreditoFoto({ foto }) {
+  if (!foto) return null
+  const texto = `Foto de ejemplo: ${foto.credito}`
+  return foto.url ? (
+    <a href={foto.url} target="_blank" rel="noreferrer" className="text-xs text-suave underline hover:text-texto">{texto}</a>
+  ) : (
+    <span className="text-xs text-suave">{texto}</span>
+  )
+}
+
+/** Galería para probar la app sin tener un cafetal cerca. */
+export function GaleriaEjemplos({ tipo, activo, deshabilitado, alElegir }) {
+  const [ejemplos, setEjemplos] = useState([])
+  useEffect(() => {
+    obtenerEjemplos(tipo).then(setEjemplos).catch(() => setEjemplos([]))
+  }, [tipo])
+  if (ejemplos.length === 0) return null
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="text-sm font-semibold text-claro">Pruebe con una foto de ejemplo</h3>
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {ejemplos.map((e) => (
+          <li key={e.slug}>
+            <button
+              type="button"
+              disabled={deshabilitado}
+              onClick={() => alElegir(e)}
+              title={e.credito}
+              className={`flex w-full flex-col overflow-hidden rounded-xl border bg-tarjeta text-left hover:border-ambar disabled:opacity-60 ${activo === e.slug ? 'border-ambar' : 'border-borde-fuerte'}`}
+            >
+              <img src={e.imagen_url} alt="" loading="lazy" className="aspect-[4/3] w-full object-cover" />
+              <span className="flex flex-col px-2.5 py-2">
+                <span className="text-[13px] font-semibold text-texto">{e.titulo}</span>
+                <span className="font-mono text-[10px] text-suave">{e.generada ? 'GENERADA CON IA' : 'FOTO REAL'}</span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export function BotonesFoto({ alElegir, deshabilitado, tipo }) {
   const entrada = useRef(null)
   return (
@@ -229,6 +276,15 @@ export function BotonesFoto({ alElegir, deshabilitado, tipo }) {
   )
 }
 
+/** Único lugar para el crédito a Meta. El logo solo se agrega aquí si Meta lo aprueba. */
+export function ConstruidoConMeta({ className = '' }) {
+  return (
+    <span className={`inline-flex flex-wrap items-center gap-x-1.5 ${className}`}>
+      Construido con <b className="font-semibold text-texto">SAM 3.1</b> y <b className="font-semibold text-texto">Muse Spark</b> de Meta
+    </span>
+  )
+}
+
 export function NavLateral() {
   const clase = ({ isActive }) =>
     `flex h-[46px] items-center gap-3 rounded-xl px-3.5 ${
@@ -252,14 +308,19 @@ export function NavLateral() {
         <Icono nombre="cerezas" />
         Maduración
       </NavLink>
+      <NavLink to="/asistente" className={clase}>
+        <Icono nombre="chat" />
+        Asistente
+      </NavLink>
       <div className="flex h-[46px] items-center gap-3 px-3.5 text-[#8aa596]">
         <Icono nombre="suelo" />
         Suelo · pronto
       </div>
       <div className="flex-1" />
+      <ConstruidoConMeta className="px-2.5 pb-3 text-xs leading-relaxed text-suave" />
       <Link to="/camara" className="flex flex-col gap-1 rounded-xl border border-[#23463a] bg-[#12291d] p-4 hover:border-ambar">
-        <span className="font-semibold text-white">Escanea desde el cafetal</span>
-        <span className="text-[13px] text-suave">Abre RoyaLens en tu celular</span>
+        <span className="font-semibold text-white">Escanee desde el cafetal</span>
+        <span className="text-[13px] text-suave">Abra RoyaLens en su celular</span>
       </Link>
     </aside>
   )
@@ -287,6 +348,10 @@ export function NavInferior() {
       <NavLink to="/maduracion" className={clase}>
         <Icono nombre="cerezas" />
         Maduración
+      </NavLink>
+      <NavLink to="/asistente" className={clase}>
+        <Icono nombre="chat" />
+        Asistente
       </NavLink>
     </nav>
   )
