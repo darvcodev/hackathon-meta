@@ -26,7 +26,7 @@ Los cinco mejores proyectos de cada track pasan a la final del 9 de noviembre. L
 4. Asistente: responde con el contexto de los escaneos, muestra fuentes cuando consulta la web y guarda un historial de conversaciones.
 5. Estadísticas: incidencia, severidad, evolución por lote, cerezas por estado y últimas preguntas, calculadas desde los datos del visitante.
 
-La app contiene ocho fotos de ejemplo para que los jueces puedan probar los flujos sin estar en un cafetal. Las fotos de ejemplo se procesan una sola vez y después se reutiliza el resultado guardado.
+La app contiene ocho imágenes de ejemplo para que los jueces puedan probar los flujos sin estar en un cafetal: dos fotos libres de derechos y seis imágenes generadas con IA, rotuladas como tales. Se procesan una sola vez y después se reutiliza el resultado guardado. Sus resultados aparecen marcados como ejemplo en Mi finca y Estadísticas.
 
 ## Evidencia y límites
 
@@ -41,11 +41,11 @@ Las cifras provienen de las evaluaciones locales del proyecto; se pueden repetir
 ## Cambiar una foto de ejemplo
 
 1. Reemplazar el archivo en `frontend/public/img/ejemplos/`, con el mismo nombre y en formato JPG.
-2. Actualizar `credito` y `url` del ejemplo en `backend/ejemplos.py`. Una foto propia usa `"credito": "Foto propia"` y `"url": None`.
+2. Actualizar `credito` y `url` del ejemplo en `backend/ejemplos.py`. Una foto propia usa `"generada": False`, `"credito": "Foto propia"` y `"url": None`.
 3. Subir `VERSION_ANALISIS` en ese archivo para que no se reutilice el resultado de la foto anterior.
 4. Abrir el ejemplo en la app y revisar que el resultado corresponda a la foto nueva.
 
-Las fotos que hoy tienen licencia con atribución son `hoja-roya`, `hoja-sana`, `hoja-otra-mancha` y `racimo-rojo`.
+Las ocho imágenes actuales son de dominio público, CC0 o generadas con IA. Las fotos reales propias se pueden agregar con estos mismos pasos.
 
 ## Despliegue en Coolify
 
@@ -58,7 +58,7 @@ Las fotos que hoy tienen licencia con atribución son `hoja-roya`, `hoja-sana`, 
 ## Revisión antes de enviar
 
 - [ ] Abrir la app y la cámara en un celular por HTTPS; analizar una foto real de hoja y otra de racimo.
-- [ ] Abrir los ocho ejemplos. Confirmar que cada uno devuelve resultado y que el crédito de la foto aparece en la interfaz.
+- [ ] Abrir los ocho ejemplos. Confirmar que cada uno devuelve resultado y que el crédito o el rótulo de imagen generada aparece en la interfaz.
 - [ ] Comprobar en una ventana privada que el historial y las fotos de otro visitante no son accesibles.
 - [ ] Verificar que el asistente responde en streaming y que los enlaces de fuentes funcionan.
 - [ ] Redesplegar una vez y confirmar que el volumen de `/data` conserva el historial.

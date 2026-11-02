@@ -32,7 +32,7 @@ La aplicación está impulsada por **SAM 3.1 y Muse Spark de Meta**. SAM entrega
 
 *Panel con datos ilustrativos. En una sesión nueva se identifica como «Finca de ejemplo» y se reemplaza por los escaneos del visitante.*
 
-La interfaz incluye cámara, escáner de roya, maduración, panel por lotes, estadísticas y asistente con historial. Hay ocho fotos de ejemplo con créditos visibles para probar los flujos sin una finca cerca.
+La interfaz incluye cámara, escáner de roya, maduración, panel por lotes, estadísticas y asistente con historial. Hay ocho imágenes de ejemplo para probar los flujos sin una finca cerca: dos fotos libres de derechos con crédito visible y seis imágenes generadas con IA, rotuladas como tales. Sus resultados se marcan como ejemplo en el panel.
 
 ## Cómo funciona el análisis
 
@@ -124,7 +124,7 @@ Las imágenes originales y anotadas se entregan por `/media/{nombre}` tras compr
 
 El `Dockerfile` compila React y arranca FastAPI en el puerto **8000** y en **modo real**. Para desplegar, configure `MODEL_API_KEY` como secreto, HTTPS para la cámara y un volumen persistente en `/data`. El health check consulta `/api/estado`. La [guía del hackathon](HACKATHON.md) contiene la revisión posterior al despliegue.
 
-Cada navegador recibe una cookie anónima. Los escaneos se separan por visitante y por modo; las fotos se eliminan junto con el escaneo al usar «Borrar mis datos» o al vencer la retención de 30 días. Los límites diarios de análisis y chat se configuran con las variables `ROYALENS_LIMITE_*`. Las ocho fotos de ejemplo comparten un resultado de análisis almacenado para evitar llamadas repetidas a la API.
+Cada navegador recibe una cookie anónima. Los escaneos se separan por visitante y por modo; las fotos se eliminan junto con el escaneo al usar «Borrar mis datos» o al vencer la retención de 30 días. Los límites diarios de análisis y chat se configuran con las variables `ROYALENS_LIMITE_*`. Las ocho imágenes de ejemplo comparten un resultado de análisis almacenado para evitar llamadas repetidas a la API.
 
 ## Verificación
 
@@ -137,8 +137,8 @@ Las pruebas usan respuestas simuladas de los modelos y no consumen créditos. Lo
 
 ## Créditos de imágenes
 
-Los enlaces, autores y licencias de las fotos de ejemplo están en `backend/ejemplos.py` y se muestran junto a cada ejemplo en la app. Las imágenes marcadas como generadas se identifican como tales. El [símbolo de Meta](https://commons.wikimedia.org/wiki/File:Meta_Platforms_logo.svg) se usa con la autorización confirmada por el responsable del proyecto.
+Los créditos de las imágenes de ejemplo están en `backend/ejemplos.py` y se muestran junto a cada una en la app. `racimo-mixto` es de dominio público y `racimo-verde` es CC0. Las imágenes generadas se identifican como tales; `hoja-roya`, `hoja-sana`, `hoja-otra-mancha` y `racimo-rojo` se crearon con Muse Image. El [símbolo de Meta](https://commons.wikimedia.org/wiki/File:Meta_Platforms_logo.svg) se usa con la autorización confirmada por el responsable del proyecto.
 
 ## Licencia
 
-El código se distribuye bajo la [licencia MIT](LICENSE). Esa licencia no cubre las fotos de ejemplo de terceros, que conservan la suya, ni el símbolo de Meta, que pertenece a su titular.
+El código se distribuye bajo la [licencia MIT](LICENSE). Esa licencia no cubre las fotos de ejemplo de terceros ni el símbolo de Meta; cada uno conserva sus propios términos.

@@ -1,6 +1,6 @@
 """Asistente con Muse Spark: responde con los datos de la finca y puede buscar en la web.
 
-No guarda conversaciones: el navegador envía el historial en cada pregunta.
+El navegador envía el historial en cada pregunta. Cada turno completo se guarda por visitante.
 """
 
 from __future__ import annotations
@@ -9,6 +9,7 @@ import logging
 import re
 from collections.abc import AsyncIterator
 
+from openai import BadRequestError
 from royalens import config
 from royalens.meta_api import make_client
 
@@ -18,6 +19,7 @@ log = logging.getLogger("royalens")
 
 MAX_MENSAJES = 12
 MAX_CONSULTADAS = 3
+FILTRO_DE_CONTENIDO = "content management policy"
 
 INSTRUCCIONES = """Eres el asistente de RoyaLens, una app para caficultores colombianos.
 
@@ -88,6 +90,10 @@ SUSTITUTO_DOSIS = (
     "No puedo indicar dosis ni productos químicos. El manejo con productos debe definirlo el extensionista "
     "del Comité de Cafeteros o Cenicafé según su lote, porque depende de la variedad, la edad del cultivo y el nivel de roya."
 )
+SUSTITUTO_VACIO = (
+    "No tengo una respuesta para esa pregunta. Si es sobre dosis o productos químicos, consulte al extensionista "
+    "del Comité de Cafeteros o a Cenicafé. Si es sobre otro tema, intente preguntarlo de otra manera."
+)
 
 
 class ChatNoDisponible(RuntimeError):
@@ -151,6 +157,8 @@ def _describir_escaneo(e: dict) -> str:
         texto = f"{fecha}, Lote {e['lote']}, racimo: {_nombre_estado(m)}."
     if interpretacion.get("lo_que_se_ve"):
         texto += f" Descripción: {interpretacion['lo_que_se_ve']}"
+    if e.get("foto_ejemplo"):
+        texto += " Es una foto de ejemplo de la app, no del cafetal."
     return texto
 
 
@@ -162,6 +170,11 @@ def contexto_finca(modo: str, visitante: str, escaneo_id: str | None = None, lot
         lineas.append(
             "ATENCIÓN: el caficultor aún no tiene escaneos. Estos son datos ilustrativos de una finca de ejemplo: "
             "si los menciona, aclare que son de ejemplo y no de su finca."
+        )
+    if resumen["hay_fotos_ejemplo"]:
+        lineas.append(
+            "ATENCIÓN: algunos datos vienen de fotos de ejemplo de la app, no del cafetal. "
+            "Si los menciona, aclare que son de una foto de ejemplo."
         )
     for l in resumen["lotes"]:
         partes = [l["nombre"]]
@@ -244,43 +257,56 @@ async def responder(
     client = make_client()
     instrucciones = f"{INSTRUCCIONES}\n\n{contexto_finca(modo, visitante, escaneo_id, lote)}"
     acumulado = ""
-    async with client.responses.stream(
-        model=config.MUSE_MODEL,
-        instructions=instrucciones,
-        input=_entrada(mensajes),
-        tools=[
-            {
-                "type": "web_search",
-                "search_context_size": "low",
-                "user_location": {"type": "approximate", "country": "CO", "timezone": "America/Bogota"},
-            }
-        ],
-        include=["web_search_call.results"],
-    ) as stream:
-        async for evento in stream:
-            if evento.type == "response.web_search_call.searching":
-                # Lo escrito antes de buscar es narración, no la respuesta.
-                acumulado = ""
-                yield {"tipo": "reinicio"}
-                yield {"tipo": "estado", "texto": "Buscando en fuentes…"}
-                continue
-            if evento.type == "response.output_item.added" and evento.item.type == "message" and acumulado:
-                acumulado = ""
-                yield {"tipo": "reinicio"}
-                continue
-            if evento.type != "response.output_text.delta":
-                continue
-            acumulado += evento.delta
-            if habla_de_dosis(acumulado):
-                log.warning("Respuesta del chat bloqueada por mencionar dosis o marcas")
-                yield {"tipo": "reemplazo", "texto": SUSTITUTO_DOSIS}
-                yield {"tipo": "fin"}
-                return
-            yield {"tipo": "texto", "delta": evento.delta}
-        final = await stream.get_final_response()
+    try:
+        async with client.responses.stream(
+            model=config.MUSE_MODEL,
+            instructions=instrucciones,
+            input=_entrada(mensajes),
+            tools=[
+                {
+                    "type": "web_search",
+                    "search_context_size": "low",
+                    "user_location": {"type": "approximate", "country": "CO", "timezone": "America/Bogota"},
+                }
+            ],
+            include=["web_search_call.results"],
+        ) as stream:
+            async for evento in stream:
+                if evento.type == "response.web_search_call.searching":
+                    # Lo escrito antes de buscar es narración, no la respuesta.
+                    acumulado = ""
+                    yield {"tipo": "reinicio"}
+                    yield {"tipo": "estado", "texto": "Buscando en fuentes…"}
+                    continue
+                if evento.type == "response.output_item.added" and evento.item.type == "message" and acumulado:
+                    acumulado = ""
+                    yield {"tipo": "reinicio"}
+                    continue
+                if evento.type != "response.output_text.delta":
+                    continue
+                acumulado += evento.delta
+                if habla_de_dosis(acumulado):
+                    log.warning("Respuesta del chat bloqueada por mencionar dosis o marcas")
+                    yield {"tipo": "reemplazo", "texto": SUSTITUTO_DOSIS}
+                    yield {"tipo": "fin"}
+                    return
+                yield {"tipo": "texto", "delta": evento.delta}
+            final = await stream.get_final_response()
+    except BadRequestError as exc:
+        # El filtro de contenido de la API rechaza algunas preguntas, por ejemplo de dosis con ingredientes activos.
+        if FILTRO_DE_CONTENIDO not in str(exc):
+            raise
+        log.warning("El filtro de contenido bloqueó la pregunta")
+        yield {"tipo": "reemplazo", "texto": SUSTITUTO_VACIO}
+        yield {"tipo": "fin"}
+        return
 
+    # Muse también puede terminar sin texto, por ejemplo ante algunas preguntas de dosis.
     if not acumulado.strip():
-        raise RuntimeError("Muse no devolvió texto")
+        log.warning("Muse terminó sin texto")
+        yield {"tipo": "reemplazo", "texto": SUSTITUTO_VACIO}
+        yield {"tipo": "fin"}
+        return
     citas = _citas(final)
     if citas:
         yield {"tipo": "citas", "citas": citas, "titulo": "Fuentes de la web"}

@@ -419,6 +419,7 @@ def estadisticas(modo: str, visitante: str) -> dict:
     return {
         "modo": modo,
         "es_ejemplo": es_ejemplo and bool(escaneos),
+        "hay_fotos_ejemplo": any(e.get("foto_ejemplo") for e in escaneos),
         "totales": {
             "escaneos": len(escaneos),
             "hojas": len(hojas),
@@ -489,7 +490,16 @@ def resumen(modo: str, visitante: str) -> dict:
         )
 
         subio = pct is not None and pct >= ALERTA_ROYA and cambio is not None and cambio >= ALERTA_SUBIDA
-        if subio or (pct is not None and pct >= ALERTA_ALTA):
+        if (subio or (pct is not None and pct >= ALERTA_ALTA)) and ultima_roya.get("foto_ejemplo"):
+            alertas.append(
+                {
+                    "lote": lote,
+                    "nivel": "revisar",
+                    "titulo": f"{nombre}: foto de ejemplo",
+                    "texto": f"La última hoja es una foto de ejemplo, no de su cafetal, y marca {_coma(pct)}% de roya.",
+                }
+            )
+        elif subio or (pct is not None and pct >= ALERTA_ALTA):
             detalle = (
                 f"La roya pasó de {_coma(previo)}% a {_coma(pct)}% en las últimas semanas."
                 if subio
@@ -517,6 +527,7 @@ def resumen(modo: str, visitante: str) -> dict:
     return {
         "modo": modo,
         "es_ejemplo": es_ejemplo and bool(escaneos),
+        "hay_fotos_ejemplo": any(e.get("foto_ejemplo") for e in escaneos),
         "indicadores": {
             "roya_promedio": round(sum(l["roya"] for l in con_roya) / len(con_roya), 1) if con_roya else None,
             "cambio_roya": round(sum(l["cambio_roya"] for l in con_cambio) / len(con_cambio), 1) if con_cambio else None,
@@ -537,6 +548,7 @@ def resumen(modo: str, visitante: str) -> dict:
                 "creado": e["creado"],
                 "medicion": e["medicion"],
                 "ejemplo": e.get("ejemplo", False),
+                "foto_ejemplo": bool(e.get("foto_ejemplo")),
             }
             for e in reversed(escaneos[-5:])
         ],

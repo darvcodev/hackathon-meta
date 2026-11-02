@@ -289,6 +289,12 @@ export default function Estadisticas() {
                 </div>
               )}
 
+              {d.hay_fotos_ejemplo && (
+                <div role="status" className="flex items-start gap-3 rounded-2xl border border-ambar/50 bg-[#2a220e] px-4 py-3 text-sm text-ambar-claro">
+                  <Icono nombre="alerta" className="mt-0.5 flex-none" />
+                  <span><b>Incluye fotos de ejemplo.</b> Esos resultados muestran cómo funciona la app, no el estado de su cafetal. Puede borrarlos con «Borrar mis datos» en Mi finca.</span>
+                </div>
+              )}
               <section aria-label="Cifras generales" className="grid flex-none grid-cols-2 gap-3 xl:grid-cols-4">
                 <Cifra
                   titulo="Incidencia de roya"

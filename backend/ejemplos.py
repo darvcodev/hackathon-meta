@@ -6,23 +6,20 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent / "frontend"
 # Sube esta versión cuando cambie el análisis: los resultados guardados dejan de usarse.
-VERSION_ANALISIS = "2026-11-02"
+VERSION_ANALISIS = "2026-11-02-fotos"
 
 EJEMPLOS = [
     {
-        "slug": "hoja-roya", "tipo": "roya", "titulo": "Hoja con roya", "generada": False,
-        "credito": "Carvalho et al., CC BY 2.5",
-        "url": "https://commons.wikimedia.org/wiki/File:Hemileia_vastatrix_Leaf_symptoms.png",
+        "slug": "hoja-roya", "tipo": "roya", "titulo": "Hoja con roya", "generada": True,
+        "credito": "Imagen generada con Muse Image, no es una foto real", "url": None,
     },
     {
-        "slug": "hoja-sana", "tipo": "roya", "titulo": "Hoja sana", "generada": False,
-        "credito": "SAplants, CC BY-SA 4.0",
-        "url": "https://commons.wikimedia.org/wiki/File:Coffea_arabica_1DS-II_4-5116.jpg",
+        "slug": "hoja-sana", "tipo": "roya", "titulo": "Hoja sana", "generada": True,
+        "credito": "Imagen generada con Muse Image, no es una foto real", "url": None,
     },
     {
-        "slug": "hoja-otra-mancha", "tipo": "roya", "titulo": "Otra enfermedad", "generada": False,
-        "credito": "Ernani Zimmermann, CC BY-SA 4.0",
-        "url": "https://commons.wikimedia.org/wiki/File:Mancha_de_olho_pardo_01.jpg",
+        "slug": "hoja-otra-mancha", "tipo": "roya", "titulo": "Otra enfermedad", "generada": True,
+        "credito": "Imagen generada con Muse Image, no es una foto real", "url": None,
     },
     {
         "slug": "hoja-generada", "tipo": "roya", "titulo": "Roya marcada", "generada": True,
@@ -39,9 +36,8 @@ EJEMPLOS = [
         "url": "https://commons.wikimedia.org/wiki/File:Coffea_arabica_serres_du_Luxembourg.jpg",
     },
     {
-        "slug": "racimo-rojo", "tipo": "maduracion", "titulo": "Racimo maduro", "generada": False,
-        "credito": "Kızıldeniz, CC BY-SA 4.0",
-        "url": "https://commons.wikimedia.org/wiki/File:Coffea_arabica_3.jpg",
+        "slug": "racimo-rojo", "tipo": "maduracion", "titulo": "Racimo maduro", "generada": True,
+        "credito": "Imagen generada con Muse Image, no es una foto real", "url": None,
     },
     {
         "slug": "racimo-generado", "tipo": "maduracion", "titulo": "Todos los estados", "generada": True,

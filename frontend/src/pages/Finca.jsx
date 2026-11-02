@@ -194,6 +194,12 @@ export default function Finca() {
                   <Link to="/roya" className="text-sm font-bold whitespace-nowrap text-ambar underline underline-offset-4">Hacer mi primer escaneo</Link>
                 </div>
               )}
+              {datos.hay_fotos_ejemplo && (
+                <div role="status" className="flex items-start gap-3 rounded-2xl border border-ambar/50 bg-[#2a220e] px-4 py-3 text-sm text-ambar-claro">
+                  <Icono nombre="alerta" className="mt-0.5 flex-none" />
+                  <span><b>Incluye fotos de ejemplo.</b> Esos resultados muestran cómo funciona la app, no el estado de su cafetal. Puede borrarlos con «Borrar mis datos» en Mi finca.</span>
+                </div>
+              )}
               <section aria-label="Resumen" className="grid flex-none grid-cols-2 gap-3 xl:grid-cols-4">
                 <Indicador
                   titulo="Roya promedio"
@@ -254,7 +260,7 @@ export default function Finca() {
                     {datos.recientes.slice(0, 3).map((e) => {
                       const contenido = (
                         <>
-                          <span className="text-claro">{e.tipo === 'roya' ? 'Hoja' : 'Racimo'} · Lote {e.lote}</span>
+                          <span className="text-claro">{e.tipo === 'roya' ? 'Hoja' : 'Racimo'} · Lote {e.lote}{e.foto_ejemplo && ' · foto de ejemplo'}</span>
                           <span className="font-mono text-xs text-medio">{etiquetaEscaneo(e)}</span>
                         </>
                       )

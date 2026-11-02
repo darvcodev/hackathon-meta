@@ -4,10 +4,13 @@ import io
 import json
 import os
 import tempfile
+from datetime import datetime, timezone
+from types import SimpleNamespace
 
 os.environ["ROYALENS_DATA"] = tempfile.mkdtemp()
 os.environ["ROYALENS_MODE"] = "demo"
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image, ImageDraw
@@ -278,6 +281,86 @@ def test_chat_error_de_api_se_muestra_como_error(client, monkeypatch):
     assert ultimo["tipo"] == "error" and "401" not in ultimo["mensaje"]
 
 
+def test_chat_respuesta_vacia_de_muse_no_es_error(client, monkeypatch):
+    from backend import chat
+
+    _chat_real(monkeypatch)
+
+    class Stream:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_):
+            return False
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            raise StopAsyncIteration
+
+        async def get_final_response(self):
+            return SimpleNamespace(output=[])
+
+    cliente = SimpleNamespace(responses=SimpleNamespace(stream=lambda **_: Stream()))
+    monkeypatch.setattr(chat, "make_client", lambda: cliente)
+    r = client.post("/api/chat", json={"mensajes": [{"rol": "usuario", "texto": "¿Cuánto producto le echo?"}]})
+    eventos = _eventos(r)
+    assert [e["tipo"] for e in eventos] == ["reemplazo", "conversacion", "fin"]
+    assert eventos[0]["texto"] == chat.SUSTITUTO_VACIO
+
+
+@pytest.mark.parametrize(
+    "mensaje,tipos",
+    [
+        ("The response was filtered due to the prompt triggering our content management policy.", ["reemplazo", "conversacion", "fin"]),
+        ("El modelo no existe.", ["error"]),
+    ],
+)
+def test_chat_distingue_filtro_de_contenido_de_otros_errores(client, monkeypatch, mensaje, tipos):
+    from openai import BadRequestError
+
+    from backend import chat
+
+    _chat_real(monkeypatch)
+
+    def rechaza(**_):
+        solicitud = httpx.Request("POST", "https://api.meta.ai/v1/responses")
+        raise BadRequestError(mensaje, response=httpx.Response(400, request=solicitud), body=None)
+
+    cliente = SimpleNamespace(responses=SimpleNamespace(stream=rechaza))
+    monkeypatch.setattr(chat, "make_client", lambda: cliente)
+    r = client.post("/api/chat", json={"mensajes": [{"rol": "usuario", "texto": "¿Cuánto producto le echo?"}]})
+    assert [e["tipo"] for e in _eventos(r)] == tipos
+
+
+def test_foto_de_ejemplo_se_marca_en_la_finca(client):
+    assert client.get("/api/resumen").json()["hay_fotos_ejemplo"] is False
+    assert client.post("/api/ejemplos/hoja-sana", data={"lote": 1}).status_code == 200
+    datos = client.get("/api/resumen").json()
+    assert datos["hay_fotos_ejemplo"] is True
+    assert datos["recientes"][0]["foto_ejemplo"] is True
+    assert client.get("/api/estadisticas").json()["hay_fotos_ejemplo"] is True
+
+
+def test_alerta_de_foto_de_ejemplo_no_parece_de_la_finca():
+    from backend import store
+
+    visitante = "visitante-alerta"
+    store.guardar(
+        {
+            "id": store.nuevo_id(), "tipo": "roya", "lote": 1, "modo": "demo",
+            "creado": datetime.now(timezone.utc).isoformat(),
+            "medicion": {"valida": True, "porcentaje": 40.0, "nivel": "Severa"},
+            "foto_ejemplo": {"titulo": "Hoja", "credito": "Prueba", "url": None},
+        },
+        visitante,
+    )
+    alerta = next(a for a in store.resumen("demo", visitante)["alertas"] if a["lote"] == 1)
+    assert alerta["nivel"] == "revisar" and "foto de ejemplo" in alerta["texto"]
+    assert "extensionista" not in alerta["texto"]
+
+
 def test_chat_valida_la_entrada(client, monkeypatch):
     _chat_real(monkeypatch)
     usuario = {"rol": "usuario", "texto": "hola"}
@@ -404,7 +487,7 @@ def test_foto_de_ejemplo_se_analiza_una_sola_vez(client, monkeypatch):
         assert b.json()["lote"] == 3
         assert b.json()["id"] != a.json()["id"] and b.json()["imagen_url"] != a.json()["imagen_url"]
         assert otro.get(b.json()["imagen_url"]).status_code == 200
-        assert "SAplants" in b.json()["foto_ejemplo"]["credito"]
+        assert "Muse Image" in b.json()["foto_ejemplo"]["credito"]
         assert otro.get("/api/resumen").json()["lotes"][2]["roya"] is not None
 
 
