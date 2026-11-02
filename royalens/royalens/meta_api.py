@@ -166,23 +166,31 @@ DIAGNOSIS_PROMPT = """Eres un asistente agronómico para caficultores colombiano
 Analiza la foto. Una herramienta de segmentación ya MIDIÓ lo siguiente:
 - Se pudo medir una hoja: {leaf_found}
 - Lesiones con color de roya sobre la hoja: {lesion_count}
-- Porcentaje del área de la hoja con esas lesiones: {percent:.1f}%
+- Porcentaje del área de la hoja con esas lesiones: {percent}%
 - Nivel según la escala de la app: {level}
+- Hojas revisadas una por una en la foto: {leaves_checked}; con manchas de color roya: {leaves_with_spots}
 
-Si no se pudo medir una hoja, ignora las cifras y no menciones porcentajes.
+Si no se pudo medir una hoja, ignora el porcentaje y no lo menciones. Aun así, describe todo lo que se alcance
+a ver en la foto y da orientación útil: una foto general también sirve para notar problemas.
 No cambies ni inventes estas cifras. Tu trabajo es interpretar lo que se VE.
 La roya forma pústulas de polvillo naranja, sobre todo en el envés. Marca
 "signos_de_roya" como true solo si ves ese polvillo o manchas amarillas compatibles;
 una mancha parda o gris con centro claro no es roya.
+Si solo se ve el haz o una vista general, no digas que la planta está sana ni que puede estar tranquilo:
+di que por esta foto no se ven signos, pero que falta revisar el envés.
 Responde SOLO con un objeto JSON válido, sin texto adicional, con estas claves:
 {{
   "es_hoja_de_cafe": true o false,
   "calidad_foto": "buena" | "regular" | "mala",
   "cara_visible": "haz" | "enves" | "no se distingue",
   "signos_de_roya": true o false,
+  "resumen": "una frase directa: cómo se ve la hoja o la planta y qué tan urgente es revisarla",
   "lo_que_se_ve": "1-2 frases describiendo manchas, color y ubicación (haz o envés)",
+  "hallazgos": ["2 a 4 observaciones concretas de esta foto: color, forma, tipo de mancha y dónde está, incluso si no parece roya"],
   "otras_causas_posibles": ["otras enfermedades o daños que podrían confundirse"],
   "recomendacion": "2-3 frases en lenguaje sencillo para el caficultor",
+  "pasos": ["2 a 4 acciones concretas, en orden, que pueda hacer en su lote"],
+  "cuando_consultar": "una frase: qué señal indica que debe buscar al extensionista",
   "consejo_foto": "cómo tomar una mejor foto si hace falta, o cadena vacía"
 }}
 Reglas: trata al caficultor de usted, con respeto y sin apodos, y escribe con naturalidad: la hoja es la que
@@ -202,8 +210,11 @@ Responde SOLO con un objeto JSON válido, sin texto adicional, con estas claves:
 {{
   "es_racimo_de_cafe": true o false,
   "calidad_foto": "buena" | "regular" | "mala",
+  "resumen": "una frase directa: en qué punto está el racimo",
   "lo_que_se_ve": "1-2 frases sobre el estado de las cerezas, en lenguaje sencillo",
+  "hallazgos": ["2 a 4 observaciones concretas de esta foto, por ejemplo cómo se reparten los colores"],
   "recomendacion": "2-3 frases prácticas sobre la recolección selectiva, en lenguaje de finca",
+  "pasos": ["2 a 4 acciones concretas para la recolección, en orden"],
   "consejo_foto": "cómo tomar una mejor foto si hace falta, o cadena vacía"
 }}
 "es_racimo_de_cafe" es true solo si se ven cerezas de café en la rama.
@@ -230,13 +241,17 @@ async def diagnose(
     lesion_count: int,
     percent: float,
     level: str,
+    leaves_checked: int = 0,
+    leaves_with_spots: int = 0,
 ) -> dict:
     """Muse Spark interpreta la foto usando la medición de SAM como contexto."""
     prompt = DIAGNOSIS_PROMPT.format(
         leaf_found="sí" if leaf_found else "no",
         lesion_count=lesion_count,
-        percent=percent,
+        percent=f"{percent:.1f}".replace(".", ","),
         level=level,
+        leaves_checked=leaves_checked,
+        leaves_with_spots=leaves_with_spots,
     )
     response = await client.responses.create(
         model=config.MUSE_MODEL,

@@ -72,6 +72,17 @@ def _db() -> sqlite3.Connection:
             PRIMARY KEY (slug, modo, version)
         )"""
     )
+    con.execute(
+        """CREATE TABLE IF NOT EXISTS conversaciones (
+            id TEXT PRIMARY KEY,
+            visitante TEXT NOT NULL,
+            modo TEXT NOT NULL,
+            titulo TEXT NOT NULL,
+            creado TEXT NOT NULL,
+            actualizado TEXT NOT NULL,
+            mensajes TEXT NOT NULL
+        )"""
+    )
     return con
 
 
@@ -129,6 +140,7 @@ def borrar_visitante(modo: str, visitante: str) -> int:
         _borrar_medios(e)
     with _db() as con:
         con.execute("DELETE FROM escaneos WHERE modo = ? AND visitante = ?", (modo, visitante))
+        con.execute("DELETE FROM conversaciones WHERE modo = ? AND visitante = ?", (modo, visitante))
     return len(escaneos)
 
 
@@ -144,7 +156,79 @@ def purgar_antiguos() -> int:
             _borrar_medios(json.loads(f["payload"]))
             con.execute("DELETE FROM escaneos WHERE id = ?", (f["id"],))
         con.execute("DELETE FROM uso WHERE dia < ?", (limite.date().isoformat(),))
+        con.execute("DELETE FROM conversaciones WHERE actualizado < ?", (limite.isoformat(),))
     return len(filas)
+
+
+def ultimo_valido(modo: str, visitante: str, lote: int, tipo: str) -> dict | None:
+    validos = [
+        e for e in listar(modo, visitante)
+        if e["lote"] == lote and e["tipo"] == tipo and e["medicion"].get("valida", True)
+    ]
+    return validos[-1] if validos else None
+
+
+def guardar_turno(modo: str, visitante: str, conversacion_id: str | None, pregunta: str, respuesta: dict) -> dict:
+    """Guarda una pregunta y su respuesta. Crea la conversación si todavía no existe."""
+    ahora = datetime.now(timezone.utc).isoformat()
+    turno = [{"rol": "usuario", "texto": pregunta, "fecha": ahora}, {"rol": "asistente", "fecha": ahora, **respuesta}]
+    with _db() as con:
+        fila = None
+        if conversacion_id:
+            fila = con.execute(
+                "SELECT * FROM conversaciones WHERE id = ? AND visitante = ? AND modo = ?",
+                (conversacion_id, visitante, modo),
+            ).fetchone()
+        if fila:
+            mensajes = json.loads(fila["mensajes"]) + turno
+            con.execute(
+                "UPDATE conversaciones SET mensajes = ?, actualizado = ? WHERE id = ?",
+                (json.dumps(mensajes, ensure_ascii=False), ahora, fila["id"]),
+            )
+            return {"id": fila["id"], "titulo": fila["titulo"]}
+        nuevo = nuevo_id()
+        titulo = pregunta if len(pregunta) <= 70 else pregunta[:67].rstrip() + "…"
+        con.execute(
+            "INSERT INTO conversaciones VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (nuevo, visitante, modo, titulo, ahora, ahora, json.dumps(turno, ensure_ascii=False)),
+        )
+    return {"id": nuevo, "titulo": titulo}
+
+
+def listar_conversaciones(modo: str, visitante: str) -> list[dict]:
+    with _db() as con:
+        filas = con.execute(
+            "SELECT * FROM conversaciones WHERE modo = ? AND visitante = ? ORDER BY actualizado DESC",
+            (modo, visitante),
+        ).fetchall()
+    return [
+        {
+            "id": f["id"],
+            "titulo": f["titulo"],
+            "actualizado": f["actualizado"],
+            "preguntas": sum(1 for m in json.loads(f["mensajes"]) if m["rol"] == "usuario"),
+        }
+        for f in filas
+    ]
+
+
+def obtener_conversacion(modo: str, visitante: str, conversacion_id: str) -> dict | None:
+    with _db() as con:
+        f = con.execute(
+            "SELECT * FROM conversaciones WHERE id = ? AND modo = ? AND visitante = ?",
+            (conversacion_id, modo, visitante),
+        ).fetchone()
+    if not f:
+        return None
+    return {"id": f["id"], "titulo": f["titulo"], "actualizado": f["actualizado"], "mensajes": json.loads(f["mensajes"])}
+
+
+def borrar_conversacion(modo: str, visitante: str, conversacion_id: str) -> bool:
+    with _db() as con:
+        return con.execute(
+            "DELETE FROM conversaciones WHERE id = ? AND modo = ? AND visitante = ?",
+            (conversacion_id, modo, visitante),
+        ).rowcount > 0
 
 
 def consumir(tipo: str, ip: str) -> None:
@@ -203,10 +287,10 @@ def sembrar_ejemplo(modo: str) -> None:
         con.execute("DELETE FROM escaneos WHERE modo = ? AND visitante = ?", (modo, EJEMPLO))
     ahora = datetime.now(timezone.utc)
     roya = {
-        1: [(30, 0.2), (16, 0.3), (2, 0.4)],
+        1: [(30, 0.0), (16, 0.0), (2, 0.4)],
         2: [(28, 2.1), (14, 2.8), (3, 3.4)],
         3: [(42, 3.0), (35, 3.9), (28, 5.2), (21, 6.6), (14, 8.0), (1, 14.6)],
-        4: [(25, 0.5), (12, 0.8)],
+        4: [(25, 0.0), (12, 0.8)],
     }
     maduracion = {1: 34, 2: 71, 3: 48, 4: 22}
 
@@ -234,14 +318,122 @@ def sembrar_ejemplo(modo: str) -> None:
                 "creado": (ahora - timedelta(days=lote)).isoformat(),
                 "modo": modo,
                 "ejemplo": True,
-                "medicion": {"porcentaje_maduro": pct, "total": None},
+                "medicion": _racimo_ilustrativo(pct),
             },
             EJEMPLO,
         )
 
 
+def _racimo_ilustrativo(pct: int) -> dict:
+    total = 30
+    maduro = round(total * pct / 100)
+    pinton = (total - maduro) // 3
+    conteo = {"verde": total - maduro - pinton, "pinton": pinton, "maduro": maduro, "sobremaduro": 0}
+    return {"porcentaje_maduro": pct, "total": total, "conteo": conteo}
+
+
+def _coma(valor: float) -> str:
+    return f"{valor:g}".replace(".", ",")
+
+
 def _fecha(escaneo: dict) -> datetime:
     return datetime.fromisoformat(escaneo["creado"])
+
+
+def estadisticas(modo: str, visitante: str) -> dict:
+    """Todo lo que muestra Estadísticas, calculado desde los escaneos y las conversaciones."""
+    escaneos = listar(modo, visitante)
+    es_ejemplo = not escaneos
+    if es_ejemplo:
+        escaneos = listar(modo, EJEMPLO)
+    ahora = datetime.now(timezone.utc)
+    validos = [e for e in escaneos if e["medicion"].get("valida", True)]
+    hojas = [e for e in validos if e["tipo"] == "roya"]
+    racimos = [e for e in validos if e["tipo"] == "maduracion"]
+    panel = resumen(modo, visitante)
+    resumen_lotes = {l["id"]: l for l in panel["lotes"]}
+
+    def conteo_de(lista: list[dict]) -> dict:
+        total = {"verde": 0, "pinton": 0, "maduro": 0, "sobremaduro": 0}
+        for e in lista:
+            for estado, n in (e["medicion"].get("conteo") or {}).items():
+                total[estado] = total.get(estado, 0) + n
+        return total
+
+    def ronda(lista: list[dict]) -> dict:
+        valores = [e["medicion"]["porcentaje"] for e in lista]
+        con_roya = sum(1 for v in valores if v >= UMBRAL_CON_ROYA)
+        return {
+            "hojas": len(valores),
+            "con_roya": con_roya,
+            "incidencia": round(100 * con_roya / len(valores)) if valores else None,
+            "severidad": round(sum(valores) / len(valores), 1) if valores else None,
+        }
+
+    niveles: dict[str, int] = {}
+    for e in hojas:
+        niveles[e["medicion"]["nivel"]] = niveles.get(e["medicion"]["nivel"], 0) + 1
+
+    por_lote = []
+    for lote in LOTES:
+        hojas_lote = [e for e in hojas if e["lote"] == lote]
+        racimos_lote = [e for e in racimos if e["lote"] == lote]
+        base = resumen_lotes[lote]
+        por_lote.append(
+            {
+                "id": lote,
+                "nombre": base["nombre"],
+                **ronda(hojas_lote),
+                "ultima_roya": base["roya"],
+                "nivel": base["nivel"],
+                "cambio": base["cambio_roya"],
+                "dias_sin_revisar": base["dias_sin_revisar"],
+                "racimos": len(racimos_lote),
+                "maduro": base["maduro"],
+                "conteo": conteo_de(racimos_lote),
+                "puntos": [{"fecha": e["creado"], "porcentaje": e["medicion"]["porcentaje"]} for e in hojas_lote],
+            }
+        )
+
+    conversaciones = listar_conversaciones(modo, visitante)
+    preguntas = []
+    for c in conversaciones:
+        for m in obtener_conversacion(modo, visitante, c["id"])["mensajes"]:
+            if m["rol"] == "usuario":
+                preguntas.append({"texto": m["texto"], "fecha": m["fecha"], "conversacion": c["id"]})
+    preguntas.sort(key=lambda p: p["fecha"], reverse=True)
+
+    semanas = []
+    for atras in range(7, -1, -1):
+        inicio = ahora - timedelta(days=7 * (atras + 1))
+        fin = ahora - timedelta(days=7 * atras)
+        semanas.append(
+            {
+                "inicio": inicio.isoformat(),
+                "fin": fin.isoformat(),
+                "escaneos": sum(1 for e in escaneos if inicio < _fecha(e) <= fin),
+                "preguntas": sum(1 for p in preguntas if inicio < datetime.fromisoformat(p["fecha"]) <= fin),
+            }
+        )
+
+    return {
+        "modo": modo,
+        "es_ejemplo": es_ejemplo and bool(escaneos),
+        "totales": {
+            "escaneos": len(escaneos),
+            "hojas": len(hojas),
+            "racimos": len(racimos),
+            "sin_medicion": len(escaneos) - len(validos),
+            "cerezas": sum(conteo_de(racimos).values()),
+            "preguntas": len(preguntas),
+            "conversaciones": len(conversaciones),
+        },
+        "roya": {**ronda(hojas), "niveles": niveles},
+        "maduracion": {"conteo": conteo_de(racimos)},
+        "por_lote": por_lote,
+        "semanas": semanas,
+        "preguntas": preguntas[:6],
+    }
 
 
 def resumen(modo: str, visitante: str) -> dict:
@@ -299,9 +491,9 @@ def resumen(modo: str, visitante: str) -> dict:
         subio = pct is not None and pct >= ALERTA_ROYA and cambio is not None and cambio >= ALERTA_SUBIDA
         if subio or (pct is not None and pct >= ALERTA_ALTA):
             detalle = (
-                f"La roya pasó de {previo:g}% a {pct:g}% en las últimas semanas."
+                f"La roya pasó de {_coma(previo)}% a {_coma(pct)}% en las últimas semanas."
                 if subio
-                else f"La última hoja escaneada tiene {pct:g}% de roya."
+                else f"La última hoja escaneada tiene {_coma(pct)}% de roya."
             )
             alertas.append(
                 {

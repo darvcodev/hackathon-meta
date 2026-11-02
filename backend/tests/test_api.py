@@ -260,7 +260,7 @@ def test_chat_transmite_eventos(client, monkeypatch):
     monkeypatch.setattr(chat, "responder", falso)
     r = client.post("/api/chat", json={"mensajes": [{"rol": "usuario", "texto": "hola"}], "lote": 2})
     assert r.status_code == 200
-    assert [e["tipo"] for e in _eventos(r)] == ["texto", "texto", "fin"]
+    assert [e["tipo"] for e in _eventos(r)] == ["texto", "texto", "conversacion", "fin"]
 
 
 def test_chat_error_de_api_se_muestra_como_error(client, monkeypatch):
@@ -501,3 +501,108 @@ def test_cliente_de_la_api_tiene_tiempo_limite(monkeypatch):
     monkeypatch.setenv("MODEL_API_KEY", "clave-de-prueba")
     cliente = make_client()
     assert cliente.timeout == config.API_TIMEOUT_SECONDS and cliente.max_retries == 1
+
+
+def _preguntar(cliente, monkeypatch, texto, conversacion=None):
+    from backend import chat
+
+    _chat_real(monkeypatch)
+
+    async def falso(mensajes, visitante, escaneo_id, lote):
+        yield {"tipo": "texto", "delta": f"Respuesta a {mensajes[-1]['texto']}"}
+        yield {"tipo": "citas", "citas": [{"titulo": "Fuente", "url": "https://ejemplo.co"}], "titulo": "Fuentes de la web"}
+        yield {"tipo": "fin"}
+
+    monkeypatch.setattr(chat, "responder", falso)
+    cuerpo = {"mensajes": [{"rol": "usuario", "texto": texto}], "conversacion_id": conversacion}
+    eventos = _eventos(cliente.post("/api/chat", json=cuerpo))
+    return next(e for e in eventos if e["tipo"] == "conversacion")
+
+
+def test_historial_guarda_y_continua_conversaciones(client, monkeypatch):
+    c = _preguntar(client, monkeypatch, "¿Cómo reconozco la roya?")
+    assert c["titulo"] == "¿Cómo reconozco la roya?"
+    assert _preguntar(client, monkeypatch, "¿Y en el envés?", c["id"])["id"] == c["id"]
+    otra = _preguntar(client, monkeypatch, "¿Cuándo cosecho?")
+    assert otra["id"] != c["id"]
+
+    lista = client.get("/api/conversaciones").json()
+    assert {x["id"]: x["preguntas"] for x in lista} == {c["id"]: 2, otra["id"]: 1}
+    guardada = client.get(f"/api/conversaciones/{c['id']}").json()
+    assert [m["rol"] for m in guardada["mensajes"]] == ["usuario", "asistente", "usuario", "asistente"]
+    assert guardada["mensajes"][1]["citas"][0]["url"] == "https://ejemplo.co"
+    assert guardada["mensajes"][1]["tituloCitas"] == "Fuentes de la web"
+
+    assert client.delete(f"/api/conversaciones/{otra['id']}").json() == {"borrada": True}
+    assert client.get(f"/api/conversaciones/{otra['id']}").status_code == 404
+
+
+def test_historial_es_privado_y_se_borra_con_mis_datos(client, monkeypatch):
+    c = _preguntar(client, monkeypatch, "Mi pregunta")
+    with _otro_navegador() as otro:
+        assert otro.get(f"/api/conversaciones/{c['id']}").status_code == 404
+        assert otro.delete(f"/api/conversaciones/{c['id']}").status_code == 404
+        assert otro.get("/api/conversaciones").json() == []
+        # Otro navegador tampoco puede escribir en una conversación ajena.
+        ajena = _preguntar(otro, monkeypatch, "Intento", c["id"])
+        assert ajena["id"] != c["id"]
+    assert len(client.get(f"/api/conversaciones/{c['id']}").json()["mensajes"]) == 2
+    client.delete("/api/mis-datos")
+    assert client.get("/api/conversaciones").json() == []
+
+
+def test_error_del_chat_no_guarda_el_turno(client, monkeypatch):
+    from backend import chat
+
+    _chat_real(monkeypatch)
+
+    async def falla(*_):
+        yield {"tipo": "texto", "delta": "Parcial"}
+        raise RuntimeError("caída")
+
+    monkeypatch.setattr(chat, "responder", falla)
+    client.post("/api/chat", json={"mensajes": [{"rol": "usuario", "texto": "hola"}]})
+    assert client.get("/api/conversaciones").json() == []
+
+
+def test_estadisticas_calcula_desde_escaneos_y_preguntas(client, monkeypatch):
+    from backend import service
+
+    assert client.get("/api/estadisticas").json()["es_ejemplo"] is True
+
+    monkeypatch.setenv("ROYALENS_MODE", "real")
+
+    resultados = iter([_diagnostico(True, porcentaje=8.0, lesiones=3), _diagnostico(True, porcentaje=0.0), _diagnostico(False)])
+
+    async def analizar(_):
+        return next(resultados)
+
+    monkeypatch.setattr(service, "analyze", analizar)
+    for _ in range(3):
+        assert client.post("/api/roya", files={"foto": _foto(_hoja)}, data={"lote": 2}).status_code == 200
+    _preguntar(client, monkeypatch, "¿Cómo va mi finca?")
+
+    d = client.get("/api/estadisticas").json()
+    assert d["es_ejemplo"] is False
+    assert d["totales"]["escaneos"] == 3 and d["totales"]["hojas"] == 2 and d["totales"]["sin_medicion"] == 1
+    assert d["roya"]["incidencia"] == 50 and d["roya"]["severidad"] == 4.0
+    lote = d["por_lote"][1]
+    assert lote["hojas"] == 2 and lote["con_roya"] == 1 and len(lote["puntos"]) == 2
+    assert d["totales"]["preguntas"] == 1 and d["preguntas"][0]["texto"] == "¿Cómo va mi finca?"
+    assert sum(s["escaneos"] for s in d["semanas"]) == 3 and sum(s["preguntas"] for s in d["semanas"]) == 1
+
+
+def test_resultado_compara_con_el_escaneo_anterior_del_lote(client, monkeypatch):
+    from backend import service
+
+    resultados = iter([_diagnostico(True, porcentaje=8.0, lesiones=3), _diagnostico(True, porcentaje=11.0, lesiones=5)])
+
+    async def analizar(_):
+        return next(resultados)
+
+    monkeypatch.setenv("ROYALENS_MODE", "real")
+    monkeypatch.setattr(service, "analyze", analizar)
+    primero = client.post("/api/roya", files={"foto": _foto(_hoja)}, data={"lote": 2}).json()
+    assert primero["comparacion"] is None
+    segundo = client.post("/api/roya", files={"foto": _foto(_hoja)}, data={"lote": 2}).json()
+    assert segundo["comparacion"]["valor"] == 8.0 and segundo["comparacion"]["cambio"] == 3.0

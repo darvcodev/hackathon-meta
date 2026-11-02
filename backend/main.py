@@ -141,6 +141,7 @@ class Mensaje(BaseModel):
 
 class Pregunta(BaseModel):
     mensajes: list[Mensaje] = Field(min_length=1, max_length=40)
+    conversacion_id: str | None = Field(default=None, max_length=32)
     escaneo_id: str | None = Field(default=None, max_length=32)
     lote: int | None = None
 
@@ -161,7 +162,9 @@ async def preguntar(p: Pregunta, request: Request) -> StreamingResponse:
 
     async def eventos():
         try:
-            async for evento in chat.responder([m.model_dump() for m in p.mensajes], visitante, p.escaneo_id, p.lote):
+            async for evento in chat.conversar(
+                [m.model_dump() for m in p.mensajes], visitante, p.conversacion_id, p.escaneo_id, p.lote
+            ):
                 yield json.dumps(evento, ensure_ascii=False) + "\n"
         except Exception:
             log.exception("Falló el asistente")
@@ -226,6 +229,31 @@ def medio(nombre: str, request: Request) -> FileResponse:
 @app.get("/api/resumen")
 def resumen(request: Request) -> dict:
     return store.resumen(service.modo(), request.state.visitante)
+
+
+@app.get("/api/estadisticas")
+def estadisticas(request: Request) -> dict:
+    return store.estadisticas(service.modo(), request.state.visitante)
+
+
+@app.get("/api/conversaciones")
+def conversaciones(request: Request) -> list[dict]:
+    return store.listar_conversaciones(service.modo(), request.state.visitante)
+
+
+@app.get("/api/conversaciones/{conversacion_id}")
+def conversacion(conversacion_id: str, request: Request) -> dict:
+    encontrada = store.obtener_conversacion(service.modo(), request.state.visitante, conversacion_id)
+    if not encontrada:
+        raise HTTPException(404, "No se encontró esa conversación.")
+    return encontrada
+
+
+@app.delete("/api/conversaciones/{conversacion_id}")
+def borrar_conversacion(conversacion_id: str, request: Request) -> dict:
+    if not store.borrar_conversacion(service.modo(), request.state.visitante, conversacion_id):
+        raise HTTPException(404, "No se encontró esa conversación.")
+    return {"borrada": True}
 
 
 @app.delete("/api/mis-datos")

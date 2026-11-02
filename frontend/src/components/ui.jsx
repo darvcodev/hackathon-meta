@@ -40,7 +40,9 @@ const TRAZOS = {
       <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
     </>
   ),
-  suelo: <path d="M3 17h18M5 21h14M12 17V7M12 11c-3 0-5-2-5-5 3 0 5 2 5 5ZM12 9c2.5 0 4-1.6 4-4-2.5 0-4 1.6-4 4Z" />,
+  estadisticas: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+  historial: <path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2" />,
+  basura: <path d="M3 6h18M8 6V4h8v2M6 6l1 15h10l1-15M10 11v6M14 11v6" />,
   alerta: <path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />,
   check: <path d="M5 12l5 5L20 7" />,
   chat: <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />,
@@ -318,10 +320,10 @@ export function NavLateral() {
         <Icono nombre="chat" />
         Asistente
       </NavLink>
-      <div className="flex h-[46px] items-center gap-3 px-3.5 text-[#8aa596]">
-        <Icono nombre="suelo" />
-        Suelo · pronto
-      </div>
+      <NavLink to="/estadisticas" className={clase}>
+        <Icono nombre="estadisticas" />
+        Estadísticas
+      </NavLink>
       <div className="flex-1" />
       <ConstruidoConMeta className="px-2.5 pb-3 text-xs leading-relaxed text-suave" />
       <Link to="/camara" className="flex flex-col gap-1 rounded-xl border border-[#23463a] bg-[#12291d] p-4 hover:border-ambar">
@@ -359,8 +361,17 @@ export function NavInferior() {
         <Icono nombre="chat" />
         Asistente
       </NavLink>
+      <NavLink to="/estadisticas" aria-label="Estadísticas" className={clase}>
+        <Icono nombre="estadisticas" />
+        Datos
+      </NavLink>
     </nav>
   )
+}
+
+/** Número con coma decimal, como se escribe en Colombia. */
+export function num(v) {
+  return String(v).replace('.', ',')
 }
 
 export function fechaCorta(iso) {

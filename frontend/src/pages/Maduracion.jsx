@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { analizar, analizarEjemplo, obtenerEscaneo } from '../api.js'
-import { AVISO_FOTOS, BarraPantalla, BotonesFoto, CreditoFoto, Error, Foto, GaleriaEjemplos, Icono, NavInferior, SelectorLote, Tarjeta, useModo } from '../components/ui.jsx'
+import { AVISO_FOTOS, BarraPantalla, BotonesFoto, CreditoFoto, Error, Foto, GaleriaEjemplos, Icono, NavInferior, SelectorLote, Tarjeta, fechaCorta, useModo } from '../components/ui.jsx'
 
 const FOTO_EJEMPLO = '/img/maduracion.jpg'
 const ESTADOS = {
@@ -72,7 +72,7 @@ function Detecciones({ escaneo, filtro }) {
 }
 
 function Resultado({ escaneo, modo }) {
-  const { medicion, recomendacion, interpretacion, avisos } = escaneo
+  const { medicion, recomendacion, interpretacion, avisos, comparacion } = escaneo
   const total = medicion.total
   const valida = medicion.valida !== false
   return (
@@ -130,14 +130,32 @@ function Resultado({ escaneo, modo }) {
           <span className="text-sm leading-relaxed text-[#f2d6d1]">{recomendacion.texto}</span>
         </div>
       </div>}
+      {valida && comparacion && (
+        <p className="flex-none text-sm text-claro">
+          <b className="text-texto">{comparacion.cambio === 0 ? 'Se mantiene igual' : `${comparacion.cambio > 0 ? 'Sube' : 'Baja'} ${Math.abs(comparacion.cambio)} puntos`}</b> frente al escaneo anterior del Lote {escaneo.lote}, que tenía {comparacion.valor}% de cerezas maduras ({fechaCorta(comparacion.fecha)}).
+        </p>
+      )}
       {interpretacion ? (
         <>
+          {interpretacion.resumen && <p className="flex-none font-sora text-lg leading-snug font-semibold text-texto">{interpretacion.resumen}</p>}
           <Tarjeta titulo="Lo que se ve" className="flex-none">
-            <p className="text-[15px] leading-relaxed text-claro">{interpretacion.lo_que_se_ve || 'Sin descripción.'}</p>
+            {interpretacion.hallazgos?.length > 0 ? (
+              <ul className="flex list-disc flex-col gap-1.5 pl-5 text-[15px] leading-relaxed text-claro">
+                {interpretacion.hallazgos.map((h, i) => <li key={i}>{h}</li>)}
+              </ul>
+            ) : (
+              <p className="text-[15px] leading-relaxed text-claro">{interpretacion.lo_que_se_ve || 'Sin descripción.'}</p>
+            )}
           </Tarjeta>
-          {interpretacion.recomendacion && (
+          {(interpretacion.pasos?.length > 0 || interpretacion.recomendacion) && (
             <Tarjeta titulo="Qué hacer" className="flex-none">
-              <p className="text-[15px] leading-relaxed text-claro">{interpretacion.recomendacion}</p>
+              {interpretacion.pasos?.length > 0 ? (
+                <ol className="flex list-decimal flex-col gap-1.5 pl-5 text-[15px] leading-relaxed text-claro">
+                  {interpretacion.pasos.map((h, i) => <li key={i}>{h}</li>)}
+                </ol>
+              ) : (
+                <p className="text-[15px] leading-relaxed text-claro">{interpretacion.recomendacion}</p>
+              )}
             </Tarjeta>
           )}
           {interpretacion.consejo_foto && <p className="flex-none text-sm text-medio">{interpretacion.consejo_foto}</p>}

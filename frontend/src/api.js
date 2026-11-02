@@ -16,6 +16,10 @@ export const obtenerEstado = () => pedir('/api/estado')
 export const obtenerResumen = () => pedir('/api/resumen')
 export const obtenerEscaneo = (id) => pedir(`/api/escaneos/${id}`)
 
+export const obtenerEstadisticas = () => pedir('/api/estadisticas')
+export const listarConversaciones = () => pedir('/api/conversaciones')
+export const obtenerConversacion = (id) => pedir(`/api/conversaciones/${id}`)
+export const borrarConversacion = (id) => pedir(`/api/conversaciones/${id}`, { method: 'DELETE' })
 export const obtenerEjemplos = (tipo) => pedir(`/api/ejemplos/${tipo}`)
 export const borrarMisDatos = () => pedir('/api/mis-datos', { method: 'DELETE' })
 
@@ -33,13 +37,13 @@ export function analizar(tipo, foto, lote) {
 }
 
 /** Envía la conversación y llama a `alEvento` con cada evento de la respuesta. */
-export async function preguntar({ mensajes, escaneoId, lote }, alEvento, senal) {
+export async function preguntar({ mensajes, conversacionId, escaneoId, lote }, alEvento, senal) {
   let respuesta
   try {
     respuesta = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mensajes, escaneo_id: escaneoId ?? null, lote: lote ?? null }),
+      body: JSON.stringify({ mensajes, conversacion_id: conversacionId ?? null, escaneo_id: escaneoId ?? null, lote: lote ?? null }),
       signal: senal,
     })
   } catch (e) {

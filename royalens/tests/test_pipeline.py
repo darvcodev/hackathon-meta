@@ -13,13 +13,16 @@ from royalens.analysis import (
     cherries_from,
     classify,
     dae_class,
+    general_view,
     has_rust_color,
+    lesion_details,
     main_leaf,
     measure,
     place_mask,
     render_overlay,
     ripeness,
     rust_lesions,
+    visible_leaves,
 )
 from royalens.meta_api import _extract_json, instances_from_events
 
@@ -249,3 +252,33 @@ def test_una_hoja_sin_lesiones_solo_cuenta_si_la_foto_lo_permite(monkeypatch, mu
     d = asyncio.run(pipeline.analyze(Image.new("RGB", (W, H), (60, 140, 60))))
     assert d.measurable is medible
     assert bool(d.warnings) is not medible
+
+
+def test_detalle_de_lesiones_clasifica_por_tamano():
+    forma = (100, 100)
+    hoja = np.ones(forma, dtype=bool)
+    grande = _instancia(forma, 0, 20, 0, 20, "grande")  # 4 % de la hoja
+    mediana = _instancia(forma, 50, 60, 50, 60, "mediana")  # 1 %
+    pequena = _instancia(forma, 90, 92, 90, 92, "pequena")  # 0,04 %
+    d = lesion_details(hoja, [grande, mediana, pequena])
+    assert d == {"mayor_lesion": 4.0, "pequenas": 1, "medianas": 1, "grandes": 1}
+    assert lesion_details(hoja, [])["mayor_lesion"] is None
+
+
+def test_vista_general_revisa_cada_hoja_sin_repetir_fragmentos():
+    forma = (100, 200)
+    rgb = np.zeros((*forma, 3), dtype=np.uint8)
+    rgb[...] = (60, 140, 60)
+    rgb[10:20, 10:20] = (235, 130, 30)
+    img = Image.fromarray(rgb)
+    a = _instancia(forma, 0, 50, 0, 50, "a")
+    fragmento = _instancia(forma, 0, 25, 0, 50, "fragmento")
+    b = _instancia(forma, 0, 50, 100, 150, "b")
+    diminuta = _instancia(forma, 90, 93, 190, 193, "diminuta")
+    hojas = visible_leaves([fragmento, a, b, diminuta], forma)
+    assert {h.object_id for h in hojas} == {"a", "b"}
+
+    resumen, lesiones = general_view(img, hojas, [_instancia(forma, 10, 20, 10, 20, "roya")])
+    assert resumen == {"hojas": 2, "con_manchas": 1, "mayor_afectacion": 4.0}
+    assert len(lesiones) == 1
+    assert general_view(img, hojas[:1], [])[0] is None

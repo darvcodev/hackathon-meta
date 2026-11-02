@@ -7,7 +7,8 @@ RoyaLens participa en el track **Indie developer**, bajo el tema **Build for You
 1. Una foto de una hoja: SAM 3.1 delimita hoja y lesiones; RoyaLens calcula el porcentaje afectado desde las máscaras; Muse Spark interpreta el resultado.
 2. Una foto de un racimo: SAM 3.1 encuentra cerezas; RoyaLens cuenta y clasifica por color; Muse Spark confirma el contexto y explica el conteo.
 3. Mi finca: un escaneo queda en el lote del visitante, con historial e indicadores. Antes del primer escaneo aparece una finca de ejemplo, rotulada como tal.
-4. Asistente: responde con el contexto de los escaneos y muestra fuentes cuando consulta la web.
+4. Asistente: responde con el contexto de los escaneos, muestra fuentes cuando consulta la web y guarda un historial de conversaciones.
+5. Estadísticas: incidencia, severidad, evolución por lote, cerezas por estado y últimas preguntas, calculadas desde los datos del visitante.
 
 La app contiene ocho fotos de ejemplo para que los jueces puedan probar los flujos sin estar en un cafetal. Las fotos de ejemplo se procesan una sola vez y después se reutiliza el resultado guardado.
 

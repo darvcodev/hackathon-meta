@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { borrarMisDatos, obtenerResumen } from '../api.js'
-import { Error, Icono, InsigniaDemo, NavInferior, NavLateral, fechaCorta } from '../components/ui.jsx'
+import { Error, Icono, InsigniaDemo, NavInferior, NavLateral, fechaCorta, num } from '../components/ui.jsx'
 import { colorNivel } from './Roya.jsx'
 
 // Lotes dibujados sobre mi-finca.jpg (1513×1040), siguiendo sus caminos.
@@ -106,7 +106,7 @@ function Evolucion({ lote }) {
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between font-mono text-xs text-medio">
         <span>{fechaCorta(puntos[activo].fecha)}</span>
-        <span className="text-texto">{puntos[activo].porcentaje}%</span>
+        <span className="text-texto">{num(puntos[activo].porcentaje)}%</span>
       </div>
       <svg
         role="img"
@@ -118,17 +118,13 @@ function Evolucion({ lote }) {
         {[0, 0.5, 1].map((f) => (
           <line key={f} x1="0" x2={A} y1={y(techo * f * 0.87)} y2={y(techo * f * 0.87)} stroke="#1F3A2B" />
         ))}
-        <motion.path
-          key={lote.id}
+        <path
           d={`M${coords.map((c) => c.join(' ')).join(' L')}`}
           fill="none"
           stroke="#F0A04B"
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.9 }}
         />
         {coords.map(([cx, cy], i) => (
           <g key={i} onMouseEnter={() => setFoco(i)}>
@@ -142,7 +138,7 @@ function Evolucion({ lote }) {
 }
 
 function etiquetaEscaneo(e) {
-  if (e.tipo === 'roya') return e.medicion.valida === false ? 'Sin medición' : `${e.medicion.porcentaje}% · ${e.medicion.nivel}`
+  if (e.tipo === 'roya') return e.medicion.valida === false ? 'Sin medición' : `${num(e.medicion.porcentaje)}% · ${e.medicion.nivel}`
   return e.medicion.valida === false ? 'Sin conteo' : `${e.medicion.porcentaje_maduro}% maduro`
 }
 
@@ -201,8 +197,8 @@ export default function Finca() {
               <section aria-label="Resumen" className="grid flex-none grid-cols-2 gap-3 xl:grid-cols-4">
                 <Indicador
                   titulo="Roya promedio"
-                  valor={i.roya_promedio !== null ? `${i.roya_promedio}%` : null}
-                  detalle={i.cambio_roya !== null ? `${i.cambio_roya > 0 ? 'sube' : 'cambia'} ${i.cambio_roya} pts en 2 semanas` : 'Sin datos para comparar'}
+                  valor={i.roya_promedio !== null ? `${num(i.roya_promedio)}%` : null}
+                  detalle={i.cambio_roya !== null ? `${i.cambio_roya > 0 ? 'sube' : 'cambia'} ${num(i.cambio_roya)} pts en 2 semanas` : 'Sin datos para comparar'}
                   tono={i.cambio_roya > 0 ? 'mala' : undefined}
                 />
                 <Indicador
@@ -245,7 +241,7 @@ export default function Finca() {
                       <Evolucion lote={lote} />
                       {lote.muestra.hojas > 0 && (
                         <p className="border-t border-borde pt-2 text-xs leading-relaxed text-medio">
-                          Últimos 30 días: <b className="text-texto">{lote.muestra.con_roya} de {lote.muestra.hojas} hojas con roya</b> ({lote.muestra.incidencia}%) y severidad media de {lote.muestra.severidad}%.
+                          Últimos 30 días: <b className="text-texto">{lote.muestra.con_roya} de {lote.muestra.hojas} hojas con roya</b> ({lote.muestra.incidencia}%) y severidad media de {num(lote.muestra.severidad)}%.
                           Orientativo: el monitoreo de Cenicafé evalúa 50 árboles por lote.
                         </p>
                       )}
@@ -272,7 +268,7 @@ export default function Finca() {
                     {!datos.es_ejemplo && datos.recientes.length > 0 && (
                       <button
                         onClick={async () => {
-                          if (!window.confirm('¿Borrar todos sus escaneos y fotos? No se puede deshacer.')) return
+                          if (!window.confirm('¿Borrar todos sus escaneos, fotos y conversaciones? No se puede deshacer.')) return
                           try {
                             await borrarMisDatos()
                             setElegido(null)

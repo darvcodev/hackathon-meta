@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { analizar, analizarEjemplo, obtenerEscaneo } from '../api.js'
-import { AVISO_FOTOS, BarraPantalla, BotonesFoto, CreditoFoto, Error, Foto, GaleriaEjemplos, Icono, NavInferior, SelectorLote, Tarjeta, useModo } from '../components/ui.jsx'
+import { AVISO_FOTOS, BarraPantalla, BotonesFoto, CreditoFoto, Error, Foto, GaleriaEjemplos, Icono, NavInferior, SelectorLote, Tarjeta, fechaCorta, num, useModo } from '../components/ui.jsx'
 
 const FOTO_EJEMPLO = '/img/escaner-roya.jpg'
 const PASOS = ['Hoja recortada', 'Lesiones segmentadas', 'Área medida', 'Explicado']
@@ -46,7 +46,7 @@ function Pasos({ activo }) {
 function Comparador({ escaneo }) {
   const [corte, setCorte] = useState(55)
   const area = useRef(null)
-  if (!escaneo.medicion.valida) {
+  if (!escaneo.medicion.valida && !escaneo.vista_general) {
     return (
       <section aria-label="Foto enviada" className="relative min-h-[320px] flex-1 overflow-hidden rounded-3xl border border-borde bg-visor">
         <Foto src={escaneo.imagen_url} ancho={escaneo.ancho} alto={escaneo.alto} alt="Foto enviada, sin medición" />
@@ -138,19 +138,73 @@ function Medidor({ medicion }) {
           transition={{ duration: 1.4, ease: 'easeOut' }}
         />
       </svg>
-      <div className="absolute inset-x-0 bottom-0 text-center font-sora text-3xl font-extrabold text-texto">{medicion.porcentaje}%</div>
+      <div className="absolute inset-x-0 bottom-0 text-center font-sora text-3xl font-extrabold text-texto">{num(medicion.porcentaje)}%</div>
     </div>
   )
 }
 
+const ESCALA = [
+  ['Sin roya', 'Sin roya visible', 0.05],
+  ['Leve', 'Leve', 3],
+  ['Moderada', 'Moderada', 12],
+  ['Alta', 'Alta', 24],
+  ['Severa', 'Severa', 100],
+]
+
+function Escala({ nivel }) {
+  return (
+    <div className="flex flex-col gap-1.5" role="img" aria-label={`Nivel ${nivel} en una escala de cinco niveles`}>
+      <div className="flex gap-1">
+        {ESCALA.map(([corto, nombre, limite]) => (
+          <div key={nombre} className="flex min-w-0 flex-1 flex-col gap-1">
+            <span
+              className={`h-2 rounded-full ${nombre === nivel ? '' : 'opacity-25'}`}
+              style={{ background: colorNivel(nombre) }}
+            />
+            <span className={`truncate text-[10.5px] ${nombre === nivel ? 'font-bold text-texto' : 'text-suave'}`}>{corto}</span>
+            <span className="font-mono text-[10px] text-suave">{limite === 100 ? '24% +' : `< ${num(limite)}%`}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Dato({ titulo, valor, detalle }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-xl bg-visor px-3 py-2.5">
+      <span className="text-xs text-medio">{titulo}</span>
+      <span className="font-sora text-lg font-extrabold text-texto">{valor}</span>
+      {detalle && <span className="text-[11px] leading-snug text-suave">{detalle}</span>}
+    </div>
+  )
+}
+
+function Lista({ elementos, numerada }) {
+  const Etiqueta = numerada ? 'ol' : 'ul'
+  return (
+    <Etiqueta className={`flex flex-col gap-1.5 pl-5 text-[15px] leading-relaxed text-claro ${numerada ? 'list-decimal' : 'list-disc'}`}>
+      {elementos.map((e, i) => (
+        <li key={i}>{e}</li>
+      ))}
+    </Etiqueta>
+  )
+}
+
+function textoCambio(c) {
+  if (c.cambio === 0) return 'Se mantiene igual'
+  return c.cambio > 0 ? `Sube ${num(c.cambio)} puntos` : `Baja ${num(Math.abs(c.cambio))} puntos`
+}
+
 function Resultado({ escaneo, modo }) {
-  const { medicion, interpretacion, avisos } = escaneo
-  const datos = [`${medicion.lesiones} LESIONES`]
-  if (medicion.confianza !== null) datos.push(`CONFIANZA SAM ${medicion.confianza}`)
+  const { medicion, interpretacion, avisos, vista_general: general, comparacion } = escaneo
+  const hallazgos = interpretacion.hallazgos ?? []
+  const pasos = interpretacion.pasos ?? []
   const muse = []
   if (interpretacion.signos_de_roya != null) muse.push(`Signos de roya: ${interpretacion.signos_de_roya ? 'sí' : 'no'}`)
   if (interpretacion.calidad_foto) muse.push(`Calidad de la foto: ${interpretacion.calidad_foto}`)
   if (interpretacion.cara_visible === 'haz' || interpretacion.cara_visible === 'enves') muse.push(`Cara visible: ${interpretacion.cara_visible === 'enves' ? 'envés' : 'haz'}`)
+  const hayTamanos = medicion.pequenas !== undefined && medicion.lesiones > 0
   return (
     <section aria-label="Resultado" className="flex min-h-0 flex-col gap-3 lg:overflow-y-auto">
       {avisos.map((aviso) => (
@@ -159,28 +213,49 @@ function Resultado({ escaneo, modo }) {
           {aviso}
         </div>
       ))}
+      {interpretacion.resumen && <p className="flex-none font-sora text-lg leading-snug font-semibold text-texto">{interpretacion.resumen}</p>}
       {medicion.valida ? (
-        <div className="flex flex-none flex-wrap items-center gap-5 rounded-[22px] border border-borde bg-tarjeta px-6 py-5">
-          <Medidor medicion={medicion} />
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[13px] text-suave">Hoja afectada · estimado con máscaras de SAM</span>
-            <span className="flex items-center gap-2 font-sora text-2xl font-extrabold">
-              <span className="size-3 rounded-full" style={{ background: colorNivel(medicion.nivel) }} />
-              {medicion.nivel}
-            </span>
-            <span className="font-mono text-xs text-medio">{datos.join(' · ')}</span>
-            {medicion.clase_dae !== null && (
-              <span className="text-xs leading-relaxed text-medio">
-                Equivale a la clase de {medicion.clase_dae}% del{' '}
-                <a href={DAE_CENICAFE} target="_blank" rel="noreferrer" className="underline hover:text-texto">diagrama de Cenicafé</a>. Nivel orientativo.
+        <div className="flex flex-none flex-col gap-4 rounded-[22px] border border-borde bg-tarjeta px-5 py-5">
+          <div className="flex flex-wrap items-center gap-5">
+            <Medidor medicion={medicion} />
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <span className="text-[13px] text-suave">Hoja afectada · estimado con máscaras de SAM</span>
+              <span className="flex items-center gap-2 font-sora text-2xl font-extrabold">
+                <span className="size-3 rounded-full" style={{ background: colorNivel(medicion.nivel) }} />
+                {medicion.nivel}
               </span>
-            )}
+              {medicion.confianza !== null && <span className="font-mono text-xs text-medio">CONFIANZA SAM {num(medicion.confianza)}</span>}
+            </div>
           </div>
+          <Escala nivel={medicion.nivel} />
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Dato titulo="Lesiones" valor={medicion.lesiones} detalle={hayTamanos ? `${medicion.grandes} grandes · ${medicion.medianas} medianas · ${medicion.pequenas} pequeñas` : null} />
+            {medicion.mayor_lesion != null && <Dato titulo="Mayor lesión" valor={`${num(medicion.mayor_lesion)}%`} detalle="de la hoja" />}
+            {medicion.area_sana != null && <Dato titulo="Área sin lesiones" valor={`${num(medicion.area_sana)}%`} detalle="de la hoja" />}
+            {medicion.clase_dae !== null && <Dato titulo="Clase Cenicafé" valor={`${medicion.clase_dae}%`} detalle={<a href={DAE_CENICAFE} target="_blank" rel="noreferrer" className="underline hover:text-texto">Ver diagrama</a>} />}
+          </div>
+          {comparacion && (
+            <p className="border-t border-borde pt-3 text-sm text-claro">
+              <b className="text-texto">{textoCambio(comparacion)}</b> frente al escaneo anterior del Lote {escaneo.lote}, que tenía {num(comparacion.valor)}% ({fechaCorta(comparacion.fecha)}).
+            </p>
+          )}
+          <p className="text-xs leading-relaxed text-suave">Es una estimación de esta foto y el nivel es orientativo.</p>
         </div>
       ) : (
         <div className="flex flex-none flex-col gap-1 rounded-[22px] border border-borde bg-tarjeta px-6 py-5">
-          <span className="font-sora text-xl font-extrabold">Sin medición</span>
-          <span className="text-sm text-medio">Esta foto no se cuenta en el historial del lote.</span>
+          <span className="font-sora text-xl font-extrabold">{general ? 'Revisión general de la foto' : 'Sin medición'}</span>
+          <span className="text-sm text-medio">Esta foto no suma cifras al historial del lote.</span>
+        </div>
+      )}
+      {general && (
+        <div className="flex flex-none flex-col gap-2 rounded-[22px] border border-borde bg-tarjeta px-5 py-4">
+          <h2 className="font-sora text-[15px] font-semibold text-ambar">Hojas revisadas en la foto</h2>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <Dato titulo="Hojas revisadas" valor={general.hojas} />
+            <Dato titulo="Con manchas color roya" valor={general.con_manchas} />
+            {general.con_manchas > 0 && <Dato titulo="La más afectada" valor={`${num(general.mayor_afectacion)}%`} detalle="de esa hoja" />}
+          </div>
+          {!medicion.valida && <p className="text-sm leading-relaxed text-medio">Para medir el porcentaje exacto, tome una sola hoja de cerca, por el envés.</p>}
         </div>
       )}
       {muse.length > 0 && (
@@ -191,10 +266,13 @@ function Resultado({ escaneo, modo }) {
         </div>
       )}
       <Tarjeta titulo="Lo que se ve" className="flex-none">
-        <p className="text-[15px] leading-relaxed text-claro">{interpretacion.lo_que_se_ve || 'Sin descripción.'}</p>
+        {hallazgos.length > 0 ? <Lista elementos={hallazgos} /> : <p className="text-[15px] leading-relaxed text-claro">{interpretacion.lo_que_se_ve || 'Sin descripción.'}</p>}
       </Tarjeta>
       <Tarjeta titulo="Qué hacer" className="flex-none">
-        <p className="text-[15px] leading-relaxed text-claro">{interpretacion.recomendacion || 'Sin recomendación.'}</p>
+        {pasos.length > 0 ? <Lista elementos={pasos} numerada /> : <p className="text-[15px] leading-relaxed text-claro">{interpretacion.recomendacion || 'Sin recomendación.'}</p>}
+        {interpretacion.cuando_consultar && (
+          <p className="mt-1 border-t border-borde pt-2.5 text-sm leading-relaxed text-claro"><b className="text-texto">Cuándo consultar:</b> {interpretacion.cuando_consultar}</p>
+        )}
       </Tarjeta>
       {interpretacion.otras_causas.length > 0 && (
         <div className="flex-none rounded-2xl border border-dashed border-[#2f5242] px-5 py-3.5 text-sm text-medio">

@@ -14,11 +14,15 @@ from .analysis import (
     Severity,
     cherries_from,
     dae_class,
+    general_view,
+    lesion_details,
     main_leaf,
     measure,
     render_overlay,
     ripeness,
     rust_lesions,
+    union,
+    visible_leaves,
 )
 from .meta_api import diagnose, interpret_ripeness, make_client, prepare_image, segment, segment_tiled
 
@@ -35,10 +39,14 @@ class Diagnosis:
     leaves_in_photo: int = 0
     discarded: int = 0
     dae: int | None = None
+    details: dict = field(default_factory=dict)
+    general: dict | None = None
 
     def as_dict(self) -> dict:
         return {
             "medicion_sam": self.severity.as_dict(),
+            "detalle_lesiones": self.details,
+            "vista_general": self.general,
             "medible": self.measurable,
             "prompt_hoja": self.leaf_prompt_used,
             "hojas_en_foto": self.leaves_in_photo,
@@ -83,11 +91,14 @@ async def analyze(
     leaf_share = 100.0 * leaf_mask.sum() / leaf_mask.size
     measurable = bool(leaf_share >= config.MIN_LEAF_PERCENT)
 
+    candidates = [inst for group in lesion_results for inst in group]
     lesions, discarded = [], 0
     if measurable:
-        candidates = [inst for group in lesion_results for inst in group]
         lesions, discarded = rust_lesions(img, leaf_mask, candidates)
     severity = measure(leaf_mask, lesions)
+    # En una foto de varias hojas también se revisan las demás, aunque no entren a la medición.
+    others = visible_leaves(leaves, shape)
+    general, general_lesions = general_view(img, others, candidates)
 
     muse = await diagnose(
         client,
@@ -96,6 +107,8 @@ async def analyze(
         lesion_count=severity.lesion_count,
         percent=severity.percent,
         level=severity.level,
+        leaves_checked=general["hojas"] if general else 0,
+        leaves_with_spots=general["con_manchas"] if general else 0,
     )
     # Un solo motivo cuando no hay medición; los demás avisos solo aplican si la hubo.
     if muse.get("es_hoja_de_cafe") is False:
@@ -104,7 +117,8 @@ async def analyze(
     elif not leaf:
         warnings.append("No se pudo medir: no se ve una hoja completa en la foto.")
     elif not measurable:
-        warnings.append("No se pudo medir: la hoja se ve muy lejos. Acérquese hasta que ocupe buena parte de la foto.")
+        if not general:
+            warnings.append("No se pudo medir: la hoja se ve muy lejos. Acérquese hasta que ocupe buena parte de la foto.")
     elif muse.get("calidad_foto") == "mala":
         measurable = False
         warnings.append("La calidad de la foto es baja: no se cuenta en el lote. Repita la toma con mejor luz y enfoque.")
@@ -125,7 +139,11 @@ async def analyze(
         if severity.percent >= config.DEFOLIATION_RISK_PERCENT:
             warnings.append("Con más del 30 % de la hoja afectada, Cenicafé reporta que puede caer antes de tiempo.")
 
-    overlay = render_overlay(img, leaf_mask, lesions)
+    if measurable or not general:
+        overlay = render_overlay(img, leaf_mask, lesions)
+    else:
+        overlay = render_overlay(img, union(others, shape), general_lesions)
+        lesions = general_lesions
     return Diagnosis(
         overlay,
         severity,
@@ -137,6 +155,8 @@ async def analyze(
         leaves_in_photo=len(leaves),
         discarded=discarded,
         dae=dae_class(severity.percent) if measurable else None,
+        details=lesion_details(leaf_mask, lesions) if measurable else {},
+        general=general if muse.get("es_hoja_de_cafe") is not False else None,
     )
 
 

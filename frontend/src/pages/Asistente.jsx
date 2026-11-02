@@ -1,22 +1,63 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { obtenerResumen, preguntar } from '../api.js'
-import { Error, Icono, InsigniaDemo, NavInferior, NavLateral, useModo } from '../components/ui.jsx'
+import { borrarConversacion, listarConversaciones, obtenerConversacion, obtenerResumen, preguntar } from '../api.js'
+import { Error, Icono, InsigniaDemo, NavInferior, NavLateral, fechaCorta, useModo } from '../components/ui.jsx'
 
-const CLAVE = 'royalens-chat'
+const CLAVE = 'royalens-conversacion'
 const MAX_PREGUNTA = 1000
+const MENSAJES_ENVIADOS = 20
 const GENERALES = ['¿Cómo reconozco la roya en una hoja?', '¿Qué diferencia hay entre incidencia y severidad?', '¿Cómo tomo una buena foto para el escáner?']
 const BASE = [
   ['Cenicafé, Avances Técnicos 498', 'https://biblioteca.cenicafe.org/bitstream/10778/4244/1/avt0498.pdf'],
   ['Boletín fitosanitario 18', 'https://publicaciones.cenicafe.org/index.php/fitosanitario/article/download/4996/5598/4313'],
 ]
 
-function leerGuardados() {
+function leerAbierta() {
   try {
-    return JSON.parse(sessionStorage.getItem(CLAVE)) ?? []
+    return sessionStorage.getItem(CLAVE)
   } catch {
-    return []
+    return null
   }
+}
+
+function guardarAbierta(id) {
+  try {
+    if (id) sessionStorage.setItem(CLAVE, id)
+    else sessionStorage.removeItem(CLAVE)
+  } catch {
+    // Sin almacenamiento, al volver se empieza una conversación nueva; el historial sigue en el servidor.
+  }
+}
+
+function Historial({ conversaciones, abierta, deshabilitado, alAbrir, alBorrar }) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
+      {conversaciones.length === 0 && <p className="px-1 text-sm leading-relaxed text-medio">Sus conversaciones aparecerán aquí.</p>}
+      <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+        {conversaciones.map((c) => (
+          <li key={c.id} className={`group flex items-stretch rounded-xl ${c.id === abierta ? 'bg-activo' : 'hover:bg-[#12291d]'}`}>
+            <button
+              disabled={deshabilitado}
+              aria-current={c.id === abierta ? 'true' : undefined}
+              onClick={() => alAbrir(c.id)}
+              className="flex min-h-12 min-w-0 flex-1 flex-col justify-center gap-0.5 px-3 py-2 text-left disabled:opacity-60"
+            >
+              <span className="truncate text-sm font-medium text-texto">{c.titulo}</span>
+              <span className="font-mono text-[11px] text-suave">{fechaCorta(c.actualizado)} · {c.preguntas} {c.preguntas === 1 ? 'pregunta' : 'preguntas'}</span>
+            </button>
+            <button
+              disabled={deshabilitado}
+              aria-label={`Borrar conversación: ${c.titulo}`}
+              onClick={() => alBorrar(c)}
+              className="flex w-10 flex-none items-center justify-center rounded-r-xl text-suave hover:text-[#ffb4a8] disabled:opacity-60"
+            >
+              <Icono nombre="basura" tam={16} />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 function sugerencias(resumen, escaneoId) {
@@ -54,7 +95,10 @@ export default function Asistente() {
   const escaneoId = parametros.get('escaneo')
   const lote = Number(parametros.get('lote')) || null
   const modo = useModo()
-  const [mensajes, setMensajes] = useState(leerGuardados)
+  const [mensajes, setMensajes] = useState([])
+  const [conversacionId, setConversacionId] = useState(null)
+  const [conversaciones, setConversaciones] = useState([])
+  const [verHistorial, setVerHistorial] = useState(false)
   const [borrador, setBorrador] = useState('')
   const [parcial, setParcial] = useState(null)
   const [estado, setEstado] = useState(null)
@@ -62,24 +106,85 @@ export default function Asistente() {
   const [resumen, setResumen] = useState(null)
   const fin = useRef(null)
   const cancelar = useRef(null)
+  const botonHistorial = useRef(null)
+  const panelHistorial = useRef(null)
   const respondiendo = parcial !== null
+
+  function cerrarHistorial() {
+    setVerHistorial(false)
+    botonHistorial.current?.focus()
+  }
+
+  const refrescar = () => listarConversaciones().then(setConversaciones).catch(() => setConversaciones([]))
+
+  async function abrir(id) {
+    setError(null)
+    setVerHistorial(false)
+    try {
+      const c = await obtenerConversacion(id)
+      setMensajes(c.mensajes)
+      setConversacionId(c.id)
+      guardarAbierta(c.id)
+    } catch {
+      nueva()
+    }
+  }
+
+  function nueva() {
+    setMensajes([])
+    setConversacionId(null)
+    setError(null)
+    setBorrador('')
+    setVerHistorial(false)
+    guardarAbierta(null)
+  }
+
+  async function borrar(c) {
+    if (!window.confirm(`¿Borrar la conversación "${c.titulo}"?`)) return
+    try {
+      await borrarConversacion(c.id)
+      if (c.id === conversacionId) nueva()
+      refrescar()
+    } catch (e) {
+      setError({ mensaje: e.message })
+    }
+  }
 
   useEffect(() => {
     obtenerResumen().then(setResumen).catch(() => setResumen(null))
+    refrescar()
+    // Una pregunta sobre un escaneo empieza limpia; si no, se retoma lo que estaba abierto.
+    const pedida = parametros.get('conversacion') ?? (escaneoId ? null : leerAbierta())
+    if (pedida) abrir(pedida)
+    else guardarAbierta(null)
     return () => cancelar.current?.abort()
   }, [])
 
   useEffect(() => {
-    try {
-      sessionStorage.setItem(CLAVE, JSON.stringify(mensajes))
-    } catch {
-      // Sin almacenamiento, la conversación solo dura mientras la página esté abierta.
-    }
-  }, [mensajes])
-
-  useEffect(() => {
     fin.current?.scrollIntoView({ block: 'end' })
   }, [mensajes, parcial, estado, error])
+
+  useEffect(() => {
+    if (!verHistorial) return undefined
+    const cerrarConEscape = (e) => {
+      if (e.key === 'Escape') {
+        cerrarHistorial()
+      } else if (e.key === 'Tab') {
+        const controles = [...panelHistorial.current.querySelectorAll('button:not(:disabled)')]
+        const primero = controles[0]
+        const ultimo = controles.at(-1)
+        if (e.shiftKey && document.activeElement === primero) {
+          e.preventDefault()
+          ultimo.focus()
+        } else if (!e.shiftKey && document.activeElement === ultimo) {
+          e.preventDefault()
+          primero.focus()
+        }
+      }
+    }
+    document.addEventListener('keydown', cerrarConEscape)
+    return () => document.removeEventListener('keydown', cerrarConEscape)
+  }, [verHistorial])
 
   async function enviar(texto) {
     const pregunta = texto.trim()
@@ -97,9 +202,10 @@ export default function Asistente() {
     let citas = []
     let tituloCitas = null
     let fallo = null
+    let idActual = conversacionId
     try {
       await preguntar(
-        { mensajes: historial.map(({ rol, texto }) => ({ rol, texto })), escaneoId, lote },
+        { mensajes: historial.slice(-MENSAJES_ENVIADOS).map(({ rol, texto }) => ({ rol, texto })), conversacionId: idActual, escaneoId, lote },
         (e) => {
           if (e.tipo === 'texto') {
             acumulado += e.delta
@@ -116,6 +222,8 @@ export default function Asistente() {
           } else if (e.tipo === 'citas') {
             citas = e.citas
             tituloCitas = e.titulo
+          } else if (e.tipo === 'conversacion') {
+            idActual = e.id
           } else if (e.tipo === 'error') {
             fallo = e.mensaje
           }
@@ -134,6 +242,9 @@ export default function Asistente() {
       setBorrador(pregunta)
     } else {
       setMensajes([...historial, { rol: 'asistente', texto: acumulado, citas, tituloCitas }])
+      setConversacionId(idActual)
+      guardarAbierta(idActual)
+      refrescar()
     }
     setParcial(null)
     setEstado(null)
@@ -143,29 +254,61 @@ export default function Asistente() {
     <div className="flex h-dvh overflow-hidden">
       <NavLateral />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex flex-none flex-wrap items-center justify-between gap-3 border-b border-[#1b3428] px-4 py-3 lg:min-h-[76px] lg:px-9">
-          <div className="flex min-w-0 flex-col gap-0.5">
+        <header className="flex flex-none items-center justify-between gap-3 border-b border-[#1b3428] px-4 py-3 lg:min-h-[76px] lg:px-9">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <h1 className="font-sora text-xl font-extrabold lg:text-[22px]">Asistente</h1>
             <span className="truncate text-[13px] text-suave">{escaneoId ? 'Pregunta sobre este resultado' : 'Pregunta sobre su cafetal · con Muse Spark'}</span>
           </div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <InsigniaDemo modo={modo} />
-            {mensajes.length > 0 && (
-              <button
-                disabled={respondiendo}
-                onClick={() => {
-                  setMensajes([])
-                  setError(null)
-                }}
-                className="h-11 rounded-xl border border-borde-fuerte px-4 text-sm font-semibold hover:border-ambar disabled:opacity-60"
-              >
-                Nueva conversación
-              </button>
-            )}
+          <div className="flex flex-none items-center gap-2">
+            {modo === 'demo' && <span className="rounded-lg border border-ambar/60 bg-ambar/10 px-2 py-1 font-mono text-[11px] font-semibold text-ambar-claro sm:hidden">DEMO</span>}
+            <div className="hidden sm:block"><InsigniaDemo modo={modo} /></div>
+            <button
+              disabled={respondiendo}
+              onClick={nueva}
+              title="Nueva conversación"
+              className="flex h-11 items-center gap-2 rounded-xl bg-ambar px-3 text-sm font-bold text-[#1a1206] hover:bg-[#ffc85e] disabled:opacity-60 md:px-4"
+            >
+              <Icono nombre="mas" tam={18} grosor={2.6} />
+              <span className="sr-only md:not-sr-only">Nueva conversación</span>
+            </button>
+            <button
+              ref={botonHistorial}
+              aria-label="Historial de conversaciones"
+              aria-controls="panel-historial"
+              aria-expanded={verHistorial}
+              onClick={() => setVerHistorial((v) => !v)}
+              title="Historial de conversaciones"
+              className="flex size-11 items-center justify-center rounded-xl border border-borde-fuerte text-texto hover:border-ambar"
+            >
+              <Icono nombre="historial" tam={20} />
+            </button>
           </div>
         </header>
 
-        <main className="flex min-h-0 flex-1 flex-col">
+        {verHistorial && (
+          <div className="fixed inset-0 z-50">
+            <button aria-label="Cerrar historial" onClick={cerrarHistorial} className="absolute inset-0 bg-black/60" />
+            <aside ref={panelHistorial} id="panel-historial" role="dialog" aria-modal="true" aria-labelledby="titulo-historial" className="absolute inset-y-0 right-0 flex w-full max-w-[360px] flex-col gap-5 border-l border-borde-fuerte bg-bosque p-4 shadow-2xl sm:p-6">
+              <div className="flex flex-none items-center justify-between gap-3 border-b border-borde pb-4">
+                <div>
+                  <h2 id="titulo-historial" className="font-sora text-lg font-bold">Historial</h2>
+                  <p className="mt-1 text-xs text-suave">Conversaciones de los últimos 30 días</p>
+                </div>
+                <button aria-label="Cerrar historial" onClick={cerrarHistorial} autoFocus className="flex size-10 items-center justify-center rounded-xl border border-borde-fuerte hover:border-ambar">
+                  <Icono nombre="cerrar" tam={18} />
+                </button>
+              </div>
+              <Historial
+                conversaciones={conversaciones}
+                abierta={conversacionId}
+                deshabilitado={respondiendo}
+                alAbrir={abrir}
+                alBorrar={borrar}
+              />
+            </aside>
+          </div>
+        )}
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div role="log" aria-live="polite" aria-label="Conversación" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-5 lg:px-9">
             {mensajes.length === 0 && !respondiendo && (
               <div className="m-auto flex w-full max-w-[640px] flex-col gap-4 text-center">

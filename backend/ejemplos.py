@@ -6,7 +6,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent / "frontend"
 # Sube esta versión cuando cambie el análisis: los resultados guardados dejan de usarse.
-VERSION_ANALISIS = "2026-11-01"
+VERSION_ANALISIS = "2026-11-02"
 
 EJEMPLOS = [
     {

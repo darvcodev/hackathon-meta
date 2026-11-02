@@ -8,6 +8,7 @@ import Roya from './pages/Roya.jsx'
 import Maduracion from './pages/Maduracion.jsx'
 import Camara from './pages/Camara.jsx'
 import Asistente from './pages/Asistente.jsx'
+import Estadisticas from './pages/Estadisticas.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -19,6 +20,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/maduracion/:id?" element={<Maduracion />} />
         <Route path="/camara" element={<Camara />} />
         <Route path="/asistente" element={<Asistente />} />
+        <Route path="/estadisticas" element={<Estadisticas />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

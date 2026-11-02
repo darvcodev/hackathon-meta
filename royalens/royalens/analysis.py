@@ -160,6 +160,51 @@ def cherries_from(instances: list[Instance]) -> list[Instance]:
     return kept
 
 
+def lesion_details(leaf_mask: np.ndarray, lesions: list[Instance]) -> dict:
+    """Tamaño de las lesiones frente a la hoja. Las cifras salen de las máscaras."""
+    leaf_px = int(leaf_mask.sum())
+    shares = [100.0 * int((inst.mask & leaf_mask).sum()) / leaf_px for inst in lesions] if leaf_px else []
+    return {
+        "mayor_lesion": round(max(shares), 1) if shares else None,
+        "pequenas": sum(1 for s in shares if s < config.SMALL_LESION_PERCENT),
+        "medianas": sum(1 for s in shares if config.SMALL_LESION_PERCENT <= s < config.LARGE_LESION_PERCENT),
+        "grandes": sum(1 for s in shares if s >= config.LARGE_LESION_PERCENT),
+    }
+
+
+def visible_leaves(leaves: list[Instance], shape: tuple[int, int]) -> list[Instance]:
+    """Hojas que se alcanzan a revisar en la foto, sin repetir fragmentos de la misma hoja."""
+    minimum = config.MIN_VISIBLE_LEAF_PERCENT / 100.0 * shape[0] * shape[1]
+    kept: list[Instance] = []
+    for leaf in sorted(leaves, key=lambda i: int(i.mask.sum()), reverse=True):
+        area = int(leaf.mask.sum())
+        if area < minimum:
+            continue
+        if any(_boxes_touch(leaf.box, other.box) and (leaf.mask & other.mask).sum() >= 0.5 * area for other in kept):
+            continue
+        kept.append(leaf)
+    return kept
+
+
+def general_view(
+    image: Image.Image, leaves: list[Instance], candidates: list[Instance]
+) -> tuple[dict | None, list[Instance]]:
+    """Revisión hoja por hoja de una foto de varias hojas. Devuelve el resumen y las lesiones."""
+    if len(leaves) < 2:
+        return None, []
+    with_lesions = 0
+    highest = 0.0
+    found: list[Instance] = []
+    for leaf in leaves:
+        nearby = [c for c in candidates if _boxes_touch(c.box, leaf.box)]
+        lesions, _ = rust_lesions(image, leaf.mask, nearby)
+        if lesions:
+            with_lesions += 1
+            highest = max(highest, measure(leaf.mask, lesions).percent)
+            found.extend(lesions)
+    return {"hojas": len(leaves), "con_manchas": with_lesions, "mayor_afectacion": round(highest, 1)}, found
+
+
 def dae_class(percent: float) -> int | None:
     """Marca de clase del Diagrama de Área Estándar de Cenicafé para ese porcentaje."""
     if percent < config.SEVERITY_LEVELS[0][0]:

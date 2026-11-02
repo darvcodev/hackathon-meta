@@ -67,6 +67,11 @@ RUST_MIN_SATURATION = 0.30
 
 # Por debajo de este % de la foto, la hoja está demasiado lejos para medirla.
 MIN_LEAF_PERCENT = 8.0
+# En una foto de varias hojas, se revisan las que ocupan al menos este % de la imagen.
+MIN_VISIBLE_LEAF_PERCENT = 1.5
+# Tamaño de una lesión frente a la hoja: hasta aquí es pequeña o mediana; más arriba, grande.
+SMALL_LESION_PERCENT = 0.5
+LARGE_LESION_PERCENT = 2.0
 
 # --- Maduración ------------------------------------------------------------
 # "coffee cherry" no devolvió nada en fotos reales; "round fruit" encontró las cerezas.

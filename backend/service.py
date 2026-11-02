@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from PIL import Image
 
 from royalens import config  # carga royalens/.env
-from royalens.analysis import Instance, dae_class
+from royalens.analysis import Instance, dae_class, lesion_details
 from royalens.meta_api import prepare_image
 from royalens.pipeline import analyze, analyze_ripeness
 
@@ -56,6 +56,19 @@ def _confianza(instancias: list[Instance]) -> float | None:
     return round(sum(valores) / len(valores), 2) if valores else None
 
 
+def _lista(valor) -> list[str]:
+    return [str(v) for v in valor if str(v).strip()] if isinstance(valor, list) else []
+
+
+def _comparacion(tipo: str, lote: int, visitante: str, actual: float | None) -> dict | None:
+    """Compara con el escaneo válido anterior del mismo lote. La cifra sale del historial."""
+    previo = store.ultimo_valido(modo(), visitante, lote, tipo)
+    if previo is None or actual is None:
+        return None
+    campo = "porcentaje" if tipo == "roya" else "porcentaje_maduro"
+    return {"fecha": previo["creado"], "valor": previo["medicion"][campo], "cambio": round(actual - previo["medicion"][campo], 1)}
+
+
 def _interpretacion_muse(muse: dict) -> dict:
     # Si Muse no devolvió JSON, se muestra su texto tal cual, sin rellenar nada.
     return {
@@ -63,6 +76,10 @@ def _interpretacion_muse(muse: dict) -> dict:
         "recomendacion": muse.get("recomendacion") or "",
         "otras_causas": muse.get("otras_causas_posibles") or [],
         "consejo_foto": muse.get("consejo_foto") or "",
+        "resumen": muse.get("resumen") or "",
+        "hallazgos": _lista(muse.get("hallazgos")),
+        "pasos": _lista(muse.get("pasos")),
+        "cuando_consultar": muse.get("cuando_consultar") or "",
         "signos_de_roya": muse.get("signos_de_roya"),
         "calidad_foto": muse.get("calidad_foto"),
         "cara_visible": muse.get("cara_visible"),
@@ -77,11 +94,13 @@ async def analizar_roya(image: Image.Image, lote: int, visitante: str) -> dict:
         interpretacion, avisos = r["interpretacion"], r["avisos"]
         valida, hojas_en_foto = severidad.leaf_pixels > 0, 1
         clase = dae_class(severidad.percent) if valida else None
+        detalle, general = (lesion_details(r["hoja"], lesiones) if valida else {}), None
     else:
         d = await analyze(img)
         overlay, severidad, lesiones = d.overlay, d.severity, d.lesions
         interpretacion, avisos = _interpretacion_muse(d.muse), d.warnings
         valida, hojas_en_foto, clase = d.measurable, d.leaves_in_photo, d.dae
+        detalle, general = d.details, d.general
 
     escaneo = _base("roya", lote, img)
     nombre_overlay = f"{escaneo['id']}_overlay.jpg"
@@ -97,7 +116,11 @@ async def analizar_roya(image: Image.Image, lote: int, visitante: str) -> dict:
             "clase_dae": clase,
             "hojas_en_foto": hojas_en_foto,
             "confianza": _confianza(lesiones),
+            "area_sana": round(100 - severidad.percent, 1) if valida else None,
+            **detalle,
         },
+        vista_general=general,
+        comparacion=_comparacion("roya", lote, visitante, round(severidad.percent, 1) if valida else None),
         detecciones=[
             # Cada prompt de SAM numera desde cero: el id se asigna aquí para que sea único.
             {"id": str(n), "caja": _caja(i.box, img.size), "confianza": i.confidence}
@@ -161,6 +184,7 @@ async def analizar_maduracion(image: Image.Image, lote: int, visitante: str) -> 
             {"id": str(n), "estado": c["estado"], "caja": _caja(c["caja"], img.size), "confianza": c.get("confianza")}
             for n, c in enumerate(cerezas)
         ],
+        comparacion=_comparacion("maduracion", lote, visitante, pct(conteo["maduro"]) if valida else None),
         recomendacion=recomendar_cosecha(pct(conteo["maduro"]), pct(conteo["sobremaduro"]), total),
         interpretacion=interpretacion,
         avisos=avisos,
@@ -184,4 +208,6 @@ async def analizar_ejemplo(slug: str, lote: int, visitante: str, al_analizar) ->
             "foto_ejemplo": {"titulo": ejemplo["titulo"], "credito": ejemplo["credito"], "url": ejemplo["url"]},
         }
         store.guardar_ejemplo(slug, ejemplos.VERSION_ANALISIS, guardado)
-    return store.copiar_escaneo(guardado, lote, visitante)
+    campo = "porcentaje" if guardado["tipo"] == "roya" else "porcentaje_maduro"
+    comparacion = _comparacion(guardado["tipo"], lote, visitante, guardado["medicion"].get(campo))
+    return store.copiar_escaneo({**guardado, "comparacion": comparacion}, lote, visitante)

@@ -16,7 +16,7 @@ La aplicación está impulsada por **SAM 3.1 y Muse Spark de Meta**. SAM entrega
 
 *Panel con datos ilustrativos. En una sesión nueva se identifica como «Finca de ejemplo» y se reemplaza por los escaneos del visitante.*
 
-La interfaz incluye cámara, escáner de roya, maduración, panel por lotes y asistente. Hay ocho fotos de ejemplo con créditos visibles para probar los flujos sin una finca cerca.
+La interfaz incluye cámara, escáner de roya, maduración, panel por lotes, estadísticas y asistente con historial. Hay ocho fotos de ejemplo con créditos visibles para probar los flujos sin una finca cerca.
 
 ## Cómo funciona el análisis
 
@@ -46,7 +46,7 @@ flowchart LR
 
 ### Asistente y panel
 
-El asistente recibe el historial del visitante como contexto y transmite la respuesta por partes. Puede consultar la web y presenta las fuentes cuando están disponibles. La conversación se guarda en la sesión del navegador; el servidor no mantiene un historial de chats. El panel agrega escaneos válidos por lote para mostrar historial, incidencia sobre las hojas fotografiadas, evolución y alertas.
+El asistente recibe el historial del visitante como contexto y transmite la respuesta por partes. Puede consultar la web y presenta las fuentes cuando están disponibles. Las conversaciones se guardan por visitante hasta 30 días, se pueden retomar o borrar desde el historial y también se eliminan con «Borrar mis datos». El panel agrega escaneos válidos por lote para mostrar historial, incidencia sobre las hojas fotografiadas, evolución y alertas.
 
 Los límites del método están resumidos en [HACKATHON.md](HACKATHON.md). En particular, falta contrastar los porcentajes con mediciones de un agrónomo y ampliar las pruebas con fotos de campo colombiano.
 

@@ -94,6 +94,32 @@ class ChatNoDisponible(RuntimeError):
     pass
 
 
+async def conversar(
+    mensajes: list[dict], visitante: str, conversacion_id: str | None, escaneo_id: str | None, lote: int | None
+) -> AsyncIterator[dict]:
+    """Responde y guarda el turno solo cuando la respuesta llegó completa."""
+    texto, citas, titulo_citas = "", [], None
+    async for evento in responder(mensajes, visitante, escaneo_id, lote):
+        if evento["tipo"] == "texto":
+            texto += evento["delta"]
+        elif evento["tipo"] == "reinicio":
+            texto = ""
+        elif evento["tipo"] == "reemplazo":
+            texto = evento["texto"]
+        elif evento["tipo"] == "citas":
+            citas, titulo_citas = evento["citas"], evento["titulo"]
+        elif evento["tipo"] == "fin":
+            guardada = store.guardar_turno(
+                service.modo(),
+                visitante,
+                conversacion_id,
+                mensajes[-1]["texto"],
+                {"texto": texto, "citas": citas, "tituloCitas": titulo_citas},
+            )
+            yield {"tipo": "conversacion", **guardada}
+        yield evento
+
+
 def comprobar_disponible() -> None:
     """Falla antes de empezar el stream, para responder con un error HTTP claro."""
     if service.modo() == "demo":

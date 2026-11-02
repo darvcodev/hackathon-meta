@@ -73,6 +73,7 @@ def analizar_roya(image: Image.Image) -> dict:
     return {
         "overlay": render_overlay(image, hoja, lesiones),
         "severidad": severidad,
+        "hoja": hoja,
         "lesiones": lesiones,
         "interpretacion": {
             "lo_que_se_ve": TEXTO_LESION,

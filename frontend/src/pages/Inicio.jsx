@@ -98,10 +98,7 @@ export default function Inicio() {
           <Link to="/roya" className="hover:text-white">Roya</Link>
           <Link to="/maduracion" className="hover:text-white">Maduración</Link>
           <Link to="/asistente" className="hover:text-white">Asistente</Link>
-          <span className="flex items-center gap-1.5 text-suave">
-            Suelo
-            <span className="rounded-md bg-[#2b2716] px-1.5 py-0.5 font-mono text-[10px] text-[#e9d9a8]">PRÓXIMAMENTE</span>
-          </span>
+          <Link to="/estadisticas" className="hover:text-white">Estadísticas</Link>
         </nav>
         <Link to="/finca" className="inline-flex h-11 items-center rounded-full border border-borde-fuerte bg-bosque/40 px-3 text-sm font-semibold whitespace-nowrap hover:border-ambar sm:px-5">
           <span className="sm:hidden">Mi finca</span><span className="hidden sm:inline">Ver mi finca</span>
