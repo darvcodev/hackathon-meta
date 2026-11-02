@@ -82,11 +82,17 @@ export default function Inicio() {
         <span className="w-1/4 bg-[#CE1126]" />
       </div>
 
-      <header className="relative z-10 flex h-[68px] flex-none items-center justify-between gap-4 px-4 lg:px-16">
-        <Link to="/" className="flex items-center gap-3 font-sora text-[22px] font-extrabold text-white">
-          <Logo />
-          RoyaLens
-        </Link>
+      <header className="relative z-10 flex h-[68px] flex-none items-center justify-between gap-2 px-4 lg:gap-4 lg:px-16">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-4">
+          <Link to="/" className="flex flex-none items-center gap-2 font-sora text-[19px] font-extrabold whitespace-nowrap text-white sm:text-[22px]">
+            <Logo tam={30} />
+            RoyaLens
+          </Link>
+          <span className="flex flex-none items-center gap-2 border-l border-white/25 pl-2.5 text-xs font-medium text-claro sm:pl-4" aria-label="Impulsado por IA de Meta">
+            <img src="/img/meta-symbol.svg" alt="" className="h-[14px] w-auto sm:h-[16px]" />
+            <span className="hidden whitespace-nowrap min-[1200px]:inline">Impulsado por IA de Meta</span>
+          </span>
+        </div>
         <nav aria-label="Principal" className="hidden items-center gap-8 text-[15px] font-medium text-claro md:flex">
           <Link to="/finca" className="hover:text-white">Mi finca</Link>
           <Link to="/roya" className="hover:text-white">Roya</Link>
@@ -97,15 +103,15 @@ export default function Inicio() {
             <span className="rounded-md bg-[#2b2716] px-1.5 py-0.5 font-mono text-[10px] text-[#e9d9a8]">PRÓXIMAMENTE</span>
           </span>
         </nav>
-        <Link to="/finca" className="inline-flex h-11 items-center rounded-full border border-borde-fuerte bg-bosque/40 px-5 text-sm font-semibold whitespace-nowrap hover:border-ambar">
-          Ver mi finca
+        <Link to="/finca" className="inline-flex h-11 items-center rounded-full border border-borde-fuerte bg-bosque/40 px-3 text-sm font-semibold whitespace-nowrap hover:border-ambar sm:px-5">
+          <span className="sm:hidden">Mi finca</span><span className="hidden sm:inline">Ver mi finca</span>
         </Link>
       </header>
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col gap-5 px-4 pb-4 lg:px-16">
         <div className="grid min-h-0 flex-1 items-center gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
           <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="flex flex-col gap-4 pt-4 lg:pt-0">
-            <span className="font-mono text-xs tracking-[1.5px] text-ambar">DEL CAFETAL COLOMBIANO, CON MODELOS DE META</span>
+            <span className="font-mono text-xs tracking-[1.5px] text-ambar">DEL CAFETAL COLOMBIANO, IMPULSADO POR IA DE META</span>
             <h1 className="font-sora text-[44px] leading-[1.04] font-extrabold tracking-tight xl:text-[64px]">
               Su cafetal,
               <br />
@@ -140,9 +146,6 @@ export default function Inicio() {
           </ol>
         </section>
 
-        <footer className="flex-none text-xs leading-relaxed text-suave">
-          Proyecto independiente de Daniel Rojas para el Meta Global AI Developer Hackathon, sin afiliación ni patrocinio de Meta. Orienta, pero no reemplaza al extensionista del Comité de Cafeteros ni a Cenicafé.
-        </footer>
       </main>
     </div>
   )

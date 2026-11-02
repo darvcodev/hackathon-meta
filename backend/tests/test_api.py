@@ -323,6 +323,8 @@ def test_dos_navegadores_no_comparten_datos(client):
 
     with _otro_navegador() as otro:
         assert otro.get(f"/api/escaneos/{e['id']}").status_code == 404
+        assert otro.get(e["imagen_url"]).status_code == 404
+        assert otro.get(e["overlay_url"]).status_code == 404
         panel = otro.get("/api/resumen").json()
         assert panel["es_ejemplo"] is True
         assert all(r["ejemplo"] for r in panel["recientes"])
@@ -456,3 +458,46 @@ def test_acepta_fotos_heic_de_iphone(client):
     img.save(buf, format="HEIF", quality=90)
     r = client.post("/api/roya", files={"foto": ("foto.heic", buf.getvalue(), "image/heic")}, data={"lote": 1})
     assert r.status_code == 200, r.text
+
+
+def test_frontend_compilado_no_expone_otros_archivos(client):
+    from backend.main import DIST
+
+    if not DIST.exists():
+        pytest.skip("Sin frontend compilado")
+    assert client.get("/favicon.svg").headers["content-type"].startswith("image/svg")
+    pagina = client.get("/finca", headers={"x-forwarded-proto": "https", "x-forwarded-host": "royalens.ejemplo.co"})
+    assert 'content="https://royalens.ejemplo.co/img/compartir.jpg"' in pagina.text
+    falso = client.get("/", headers={"x-forwarded-host": 'x"><script>'})
+    assert "<script>\"" not in falso.text and 'x"><script>' not in falso.text
+    assert client.get("/assets/noexiste.js").status_code == 404
+    assert client.get("/media/noexiste.jpg").status_code == 404
+    assert client.get("/api/noexiste").status_code == 404
+    assert "RoyaLens" in client.get("/..%2f..%2fbackend%2fmain.py").text
+    assert "MAX_FOTO_BYTES" not in client.get("/..%2f..%2fbackend%2fmain.py").text
+
+
+def test_analisis_trabado_es_error_y_no_guarda(client, monkeypatch):
+    import asyncio
+
+    from backend import main, service
+
+    monkeypatch.setenv("ROYALENS_MODE", "real")
+    monkeypatch.setattr(main, "TIEMPO_ANALISIS", 0.05)
+
+    async def trabado(_):
+        await asyncio.sleep(5)
+
+    monkeypatch.setattr(service, "analyze", trabado)
+    r = client.post("/api/roya", files={"foto": _foto(_hoja)}, data={"lote": 1})
+    assert r.status_code == 504 and "tardó" in r.json()["detail"]
+    assert client.get("/api/resumen").json()["indicadores"]["escaneos_mes"] == 0
+
+
+def test_cliente_de_la_api_tiene_tiempo_limite(monkeypatch):
+    from royalens import config
+    from royalens.meta_api import make_client
+
+    monkeypatch.setenv("MODEL_API_KEY", "clave-de-prueba")
+    cliente = make_client()
+    assert cliente.timeout == config.API_TIMEOUT_SECONDS and cliente.max_retries == 1

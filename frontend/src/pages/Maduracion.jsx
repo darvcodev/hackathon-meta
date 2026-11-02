@@ -267,7 +267,7 @@ export default function Maduracion() {
                   <BotonesFoto tipo="maduracion" alElegir={procesar} deshabilitado={analizando} />
                 </div>
                 <GaleriaEjemplos tipo="maduracion" activo={activo} deshabilitado={analizando} alElegir={usarEjemplo} />
-                <p className="text-xs leading-relaxed text-suave">{AVISO_FOTOS}</p>
+                <p className="text-xs leading-relaxed text-suave">{AVISO_FOTOS[modo] ?? AVISO_FOTOS.desconocido}</p>
               </section>
             </>
           )}

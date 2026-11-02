@@ -221,7 +221,7 @@ function Resultado({ escaneo, modo }) {
   )
 }
 
-function Preparacion({ vista, analizando, error, lote, setLote, alElegir, alEjemplo, activo }) {
+function Preparacion({ vista, analizando, error, lote, setLote, alElegir, alEjemplo, activo, modo }) {
   return (
     <div className="grid min-h-0 flex-1 gap-6 p-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:px-9 lg:py-6">
       <section className="relative min-h-[360px] overflow-hidden rounded-3xl border border-borde bg-visor">
@@ -242,7 +242,7 @@ function Preparacion({ vista, analizando, error, lote, setLote, alElegir, alEjem
           <BotonesFoto tipo="roya" alElegir={alElegir} deshabilitado={analizando} />
         </div>
         <GaleriaEjemplos tipo="roya" activo={activo} deshabilitado={analizando} alElegir={alEjemplo} />
-        <p className="text-xs leading-relaxed text-suave">{AVISO_FOTOS}</p>
+        <p className="text-xs leading-relaxed text-suave">{AVISO_FOTOS[modo] ?? AVISO_FOTOS.desconocido}</p>
       </section>
     </div>
   )
@@ -343,6 +343,7 @@ export default function Roya() {
           alElegir={procesar}
           alEjemplo={usarEjemplo}
           activo={activo}
+          modo={modo}
         />
       )}
       <NavInferior />

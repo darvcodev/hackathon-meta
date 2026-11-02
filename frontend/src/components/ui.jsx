@@ -197,7 +197,11 @@ export function Foto({ src, ancho, alto, alt, children }) {
   )
 }
 
-export const AVISO_FOTOS = 'Sus fotos se envían a los modelos de Meta para el análisis y se guardan 30 días para su historial. Puede borrarlas en Mi finca.'
+export const AVISO_FOTOS = {
+  real: 'Sus fotos se envían a los modelos de Meta para el análisis y se guardan hasta 30 días para su historial. Puede borrarlas en Mi finca.',
+  demo: 'En modo demo, sus fotos se analizan en este servidor sin enviarlas a Meta. Se guardan hasta 30 días para su historial y puede borrarlas en Mi finca.',
+  desconocido: 'Sus fotos se guardan hasta 30 días para su historial. Puede borrarlas en Mi finca.',
+}
 
 export function CreditoFoto({ foto }) {
   if (!foto) return null
@@ -276,11 +280,12 @@ export function BotonesFoto({ alElegir, deshabilitado, tipo }) {
   )
 }
 
-/** Único lugar para el crédito a Meta. El logo solo se agrega aquí si Meta lo aprueba. */
+/** Atribución de los modelos usados por la app. */
 export function ConstruidoConMeta({ className = '' }) {
   return (
     <span className={`inline-flex flex-wrap items-center gap-x-1.5 ${className}`}>
-      Construido con <b className="font-semibold text-texto">SAM 3.1</b> y <b className="font-semibold text-texto">Muse Spark</b> de Meta
+      <img src="/img/meta-symbol.svg" alt="" className="mr-1 h-[16px] w-auto flex-none" />
+      Impulsado por IA de Meta: <b className="font-semibold text-texto">SAM 3.1</b> y <b className="font-semibold text-texto">Muse Spark</b>
     </span>
   )
 }
@@ -295,6 +300,7 @@ export function NavLateral() {
       <Link to="/" className="flex items-center gap-2.5 px-2.5 pb-6 font-sora text-xl font-extrabold text-white">
         <Logo tam={30} />
         RoyaLens
+        <img src="/img/meta-symbol.svg" alt="" className="ml-auto h-[14px] w-auto" />
       </Link>
       <NavLink to="/finca" className={clase}>
         <Icono nombre="casa" />

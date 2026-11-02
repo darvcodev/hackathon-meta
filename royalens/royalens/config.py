@@ -19,11 +19,14 @@ def _load_dotenv(path: Path) -> None:
         os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
-_load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+_ROOT = Path(__file__).resolve().parent.parent
+_load_dotenv(_ROOT / ".env")
+_load_dotenv(_ROOT.parent / ".env")
 
 # --- API de Meta -----------------------------------------------------------
 BASE_URL = os.getenv("META_BASE_URL", "https://api.meta.ai/v1")
 API_KEY_ENV = "MODEL_API_KEY"
+API_TIMEOUT_SECONDS = 60.0
 
 SAM_MODEL = os.getenv("ROYALENS_SAM_MODEL", "sam-3.1")
 MUSE_MODEL = os.getenv("ROYALENS_MUSE_MODEL", "muse-spark-1.3")

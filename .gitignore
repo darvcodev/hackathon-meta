@@ -27,3 +27,6 @@ assets/originales/
 
 # Fotos de prueba de terceros; ver fotos/FUENTES.md
 fotos/
+
+# Archivos temporales de auditorías locales
+.audit_tmp/

@@ -40,7 +40,8 @@ def make_client() -> AsyncOpenAI:
             f"Falta la variable {config.API_KEY_ENV}. Crea tu API key en "
             "https://dev.meta.ai/ y ponla en el archivo .env"
         )
-    return AsyncOpenAI(base_url=config.BASE_URL, api_key=key)
+    # Sin tiempo límite, una respuesta trabada dejaría al caficultor esperando indefinidamente.
+    return AsyncOpenAI(base_url=config.BASE_URL, api_key=key, timeout=config.API_TIMEOUT_SECONDS, max_retries=1)
 
 
 def prepare_image(image: Image.Image) -> tuple[Image.Image, str]:

@@ -4,9 +4,11 @@
 .venv
 data
 assets
-mockups
 **/node_modules
 frontend/dist
 **/__pycache__
 **/.pytest_cache
 .DS_Store
+fotos
+scripts
+readme-assets

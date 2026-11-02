@@ -14,7 +14,7 @@ from typing import Literal
 from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, UnidentifiedImageError
 from pillow_heif import register_heif_opener
@@ -30,6 +30,9 @@ log = logging.getLogger("royalens")
 MAX_FOTO_BYTES = 15 * 1024 * 1024
 MAX_PREGUNTA = 1000
 COOKIE = "royalens_visitante"
+# Un análisis denso usa unos 350 MB: los demás esperan su turno en vez de agotar la memoria.
+CUPO_ANALISIS = asyncio.Semaphore(3)
+TIEMPO_ANALISIS = 120
 DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 
@@ -54,7 +57,6 @@ async def _inicio(_: FastAPI):
 
 app = FastAPI(title="RoyaLens", lifespan=_inicio)
 store.MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/media", StaticFiles(directory=store.MEDIA_DIR), name="media")
 
 
 @app.middleware("http")
@@ -111,11 +113,15 @@ def _validar_lote(lote: int) -> None:
 async def _protegido(trabajo) -> dict:
     """Convierte fallos de la API en errores que se muestran como errores, nunca como resultados."""
     try:
-        return await trabajo
+        async with CUPO_ANALISIS:
+            return await asyncio.wait_for(trabajo, TIEMPO_ANALISIS)
     except MissingApiKey as exc:
         raise HTTPException(503, str(exc))
     except HTTPException:
         raise
+    except TimeoutError:
+        log.error("El análisis superó %s segundos", TIEMPO_ANALISIS)
+        raise HTTPException(504, "El análisis tardó demasiado. No se guardó ningún resultado; intente de nuevo.")
     except Exception:
         log.exception("Falló el análisis")
         raise HTTPException(502, "El análisis falló. No se guardó ningún resultado; intente de nuevo.")
@@ -202,6 +208,21 @@ def escaneo(escaneo_id: str, request: Request) -> dict:
     return encontrado
 
 
+@app.get("/media/{nombre}", include_in_schema=False)
+def medio(nombre: str, request: Request) -> FileResponse:
+    """Las fotos pertenecen al visitante que creó el escaneo."""
+    if not re.fullmatch(r"[0-9a-f]{12}(?:_overlay)?\.jpg", nombre):
+        raise HTTPException(404, "Foto no encontrada.")
+    escaneo_id = nombre[:12]
+    registro = store.obtener(escaneo_id, service.modo(), request.state.visitante)
+    if not registro or f"/media/{nombre}" not in (registro.get("imagen_url"), registro.get("overlay_url")):
+        raise HTTPException(404, "Foto no encontrada.")
+    ruta = store.MEDIA_DIR / nombre
+    if not ruta.is_file():
+        raise HTTPException(404, "Foto no encontrada.")
+    return FileResponse(ruta, media_type="image/jpeg")
+
+
 @app.get("/api/resumen")
 def resumen(request: Request) -> dict:
     return store.resumen(service.modo(), request.state.visitante)
@@ -212,12 +233,26 @@ def borrar_mis_datos(request: Request) -> dict:
     return {"borrados": store.borrar_visitante(service.modo(), request.state.visitante)}
 
 
+def _pagina(request: Request) -> HTMLResponse:
+    """Las redes sociales exigen la imagen para compartir con su dirección completa."""
+    esquema = request.headers.get("x-forwarded-proto") or request.url.scheme
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host", "")
+    html = (DIST / "index.html").read_text(encoding="utf-8")
+    if esquema in ("http", "https") and re.fullmatch(r"[A-Za-z0-9.:-]+", host):
+        html = html.replace('content="/img/compartir.jpg"', f'content="{esquema}://{host}/img/compartir.jpg"')
+    return HTMLResponse(html)
+
+
 if DIST.exists():
     app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
     app.mount("/img", StaticFiles(directory=DIST / "img"), name="img")
 
     @app.get("/{ruta:path}", include_in_schema=False)
-    def spa(ruta: str) -> FileResponse:
-        if ruta.startswith("api/"):
+    def spa(ruta: str, request: Request):
+        if ruta.startswith(("api/", "assets/", "media/")):
             raise HTTPException(404, "Ruta no encontrada.")
-        return FileResponse(DIST / "index.html")
+        # Archivos de la raíz del frontend, como el icono de la pestaña.
+        archivo = (DIST / ruta).resolve()
+        if ruta and archivo.is_file() and archivo.is_relative_to(DIST.resolve()):
+            return FileResponse(archivo)
+        return _pagina(request)

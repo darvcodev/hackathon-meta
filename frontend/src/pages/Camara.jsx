@@ -149,7 +149,7 @@ export default function Camara() {
               <Icono nombre="casa" tam={22} />
             </Link>
           </div>
-          <p className="text-center text-[11px] leading-snug text-suave">{AVISO_FOTOS}</p>
+          <p className="text-center text-[11px] leading-snug text-suave">{AVISO_FOTOS[modo] ?? AVISO_FOTOS.desconocido}</p>
         </div>
 
         <input
