@@ -1,6 +1,22 @@
 # Guía de entrega · Meta Global AI Developer Hackathon
 
-RoyaLens participa en el track **Indie developer**, bajo el tema **Build for Your World**. La evaluación anunciada para este track considera creatividad, ambición técnica y funcionamiento. Las [fechas y criterios públicos](https://dev.meta.ai/events/global-hackathon) indican entrega el **4 de noviembre de 2026 a las 9:00 p. m. ET** (9:00 p. m. en Bogotá). Las reglas del formulario para participantes deben revisarse en la cuenta del evento antes de enviar.
+RoyaLens participa en el track **Indie developer**, bajo el tema **Build for Your World**. La entrega se hace en el [formulario del evento](https://cerebralvalley.ai/e/meta-ai-developer-hackathon/hackathon/submit) hasta el **4 de noviembre de 2026 a las 9:00 p. m. ET** (9:00 p. m. en Bogotá). El 3 de noviembre es el último día completo para preguntas de entrega.
+
+## Requisitos y evaluación
+
+- El repositorio debe ser público.
+- El video dura tres minutos y muestra funciones, código y funcionamiento creados durante el evento. Debe quedar claro qué se construyó en ese periodo.
+- Los jueces evalúan el video, el código y el producto en vivo. El formulario no tiene un campo para la URL de la app: debe ir en la descripción, en el README y en el video.
+- Solo se pueden usar código, datos y recursos sobre los que se tengan derechos.
+
+| Criterio | Peso |
+|---|---|
+| Impacto | 30 % |
+| Uso de las herramientas de IA de Meta | 25 % |
+| Demo | 25 % |
+| Profundidad técnica y ejecución | 20 % |
+
+Los cinco mejores proyectos de cada track pasan a la final del 9 de noviembre. Las reglas completas están en la [guía del participante](https://cerebralvalley.ai/e/meta-ai-developer-hackathon/details) y en las [reglas oficiales](https://cerebralvalley.ai/e/meta-ai-developer-hackathon/waiver).
 
 ## Qué mostrar a los jueces
 
@@ -22,6 +38,15 @@ La app contiene ocho fotos de ejemplo para que los jueces puedan probar los fluj
 
 Las cifras provienen de las evaluaciones locales del proyecto; se pueden repetir con fotos propias mediante `scripts/evaluar_roya.py`, `scripts/evaluar_maduracion.py` y `scripts/evaluar_chat.py`. Estos comandos usan la API y consumen créditos. Las fotos de calibración de terceros no forman parte del repositorio; se conservan fuera de Git con sus fuentes y licencias.
 
+## Cambiar una foto de ejemplo
+
+1. Reemplazar el archivo en `frontend/public/img/ejemplos/`, con el mismo nombre y en formato JPG.
+2. Actualizar `credito` y `url` del ejemplo en `backend/ejemplos.py`. Una foto propia usa `"credito": "Foto propia"` y `"url": None`.
+3. Subir `VERSION_ANALISIS` en ese archivo para que no se reutilice el resultado de la foto anterior.
+4. Abrir el ejemplo en la app y revisar que el resultado corresponda a la foto nueva.
+
+Las fotos que hoy tienen licencia con atribución son `hoja-roya`, `hoja-sana`, `hoja-otra-mancha` y `racimo-rojo`.
+
 ## Despliegue en Coolify
 
 1. Crear una aplicación desde este repositorio y seleccionar el `Dockerfile` de la raíz. El contenedor sirve frontend y API en el puerto **8000**.
@@ -38,7 +63,10 @@ Las cifras provienen de las evaluaciones locales del proyecto; se pueden repetir
 - [ ] Verificar que el asistente responde en streaming y que los enlaces de fuentes funcionan.
 - [ ] Redesplegar una vez y confirmar que el volumen de `/data` conserva el historial.
 - [ ] Compartir el enlace en una app de mensajería y revisar título, descripción e imagen de vista previa.
-- [ ] Revisar en el formulario oficial los campos, el video, el acceso al repositorio y el plazo de disponibilidad de la demo.
+- [ ] Revisar en Billing el saldo y la vigencia de los créditos, y mantener la demo activa durante el juicio y la final.
+- [ ] Reemplazar en el README «pendiente de publicar» por los enlaces de la demo y del video.
 - [ ] Grabar el video con datos observados en la app; describir las mediciones como estimaciones.
+- [ ] Hacer público el repositorio y abrir en una ventana privada los enlaces del repositorio, el video y la demo.
+- [ ] Incluir la URL de la app en la descripción del formulario y enviar.
 
 Fuentes del evento: [Meta Developer](https://dev.meta.ai/events/global-hackathon) y [Cerebral Valley](https://cerebralvalley.ai/e/meta-ai-developer-hackathon).

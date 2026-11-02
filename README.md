@@ -2,6 +2,22 @@
 
 ![Vista previa de RoyaLens](frontend/public/img/compartir.jpg)
 
+**Demo en vivo:** pendiente de publicar · **Video:** pendiente de publicar
+
+## In English
+
+RoyaLens helps coffee growers check leaves and cherry clusters from a phone. Built for the Meta Global AI Developer Hackathon (Indie Developer track, *Build for Your World*).
+
+- **Coffee leaf rust:** SAM 3.1 segments the leaf and its lesions. RoyaLens computes the affected area from those masks, and Muse Spark checks the context and explains the result.
+- **Ripeness:** SAM 3.1 finds the visible cherries. RoyaLens counts them and classifies each one by the color inside its mask, and Muse Spark confirms the scene and explains the count.
+- **Farm history and assistant:** valid scans are stored per plot, with statistics and a streaming assistant that uses the visitor's scans as context and can search the web.
+
+Results are estimates from a single photo. They have not been validated against agronomist measurements or field trials.
+
+**Built during the hackathon:** all the code and the features described here were created during the event's building period (October 27 to November 4, 2026). The Git history starts on November 1. Open-source dependencies are listed in `backend/requirements.txt` and `frontend/package.json`.
+
+## Descripción
+
 **RoyaLens** ayuda a revisar hojas y racimos de café desde el celular. Estima qué parte de una hoja está afectada por roya, cuenta cerezas visibles por estado de maduración y guarda los resultados por lote. Un asistente explica los escaneos y responde preguntas sobre el cafetal.
 
 La aplicación está impulsada por **SAM 3.1 y Muse Spark de Meta**. SAM entrega máscaras de imagen; el porcentaje y los conteos los calcula el código de RoyaLens a partir de esas máscaras. Son estimaciones de una foto, no mediciones de campo certificadas.
@@ -122,3 +138,7 @@ Las pruebas usan respuestas simuladas de los modelos y no consumen créditos. Lo
 ## Créditos de imágenes
 
 Los enlaces, autores y licencias de las fotos de ejemplo están en `backend/ejemplos.py` y se muestran junto a cada ejemplo en la app. Las imágenes marcadas como generadas se identifican como tales. El [símbolo de Meta](https://commons.wikimedia.org/wiki/File:Meta_Platforms_logo.svg) se usa con la autorización confirmada por el responsable del proyecto.
+
+## Licencia
+
+El código se distribuye bajo la [licencia MIT](LICENSE). Esa licencia no cubre las fotos de ejemplo de terceros, que conservan la suya, ni el símbolo de Meta, que pertenece a su titular.
