@@ -18,6 +18,7 @@ frontend:
 
 test:
 	.venv/bin/python -m pytest -q
+	cd frontend && npm run revisar:traducciones
 
 build:
 	cd frontend && npm run build

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "revisar:traducciones": "node scripts/revisar-traducciones.mjs"
   },
   "dependencies": {
     "framer-motion": "^14.9.0",
