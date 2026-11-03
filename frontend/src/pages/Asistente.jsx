@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { borrarConversacion, listarConversaciones, obtenerConversacion, obtenerResumen, preguntar } from '../api.js'
-import { Error, Icono, InsigniaDemo, NavInferior, NavLateral, fechaCorta, useModo } from '../components/ui.jsx'
+import { Error, Icono, InsigniaDemo, NavInferior, NavLateral, SelectorIdioma, fechaCorta, useModo } from '../components/ui.jsx'
+import { t } from '../i18n.js'
 
 const CLAVE = 'royalens-conversacion'
 const MAX_PREGUNTA = 1000
@@ -32,7 +33,7 @@ function guardarAbierta(id) {
 function Historial({ conversaciones, abierta, deshabilitado, alAbrir, alBorrar }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
-      {conversaciones.length === 0 && <p className="px-1 text-sm leading-relaxed text-medio">Sus conversaciones aparecerán aquí.</p>}
+      {conversaciones.length === 0 && <p className="px-1 text-sm leading-relaxed text-medio">{t('Sus conversaciones aparecerán aquí.')}</p>}
       <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
         {conversaciones.map((c) => (
           <li key={c.id} className={`group flex items-stretch rounded-xl ${c.id === abierta ? 'bg-activo' : 'hover:bg-[#12291d]'}`}>
@@ -43,11 +44,11 @@ function Historial({ conversaciones, abierta, deshabilitado, alAbrir, alBorrar }
               className="flex min-h-12 min-w-0 flex-1 flex-col justify-center gap-0.5 px-3 py-2 text-left disabled:opacity-60"
             >
               <span className="truncate text-sm font-medium text-texto">{c.titulo}</span>
-              <span className="font-mono text-[11px] text-suave">{fechaCorta(c.actualizado)} · {c.preguntas} {c.preguntas === 1 ? 'pregunta' : 'preguntas'}</span>
+              <span className="font-mono text-[11px] text-suave">{fechaCorta(c.actualizado)} · {t(c.preguntas === 1 ? '{n} pregunta' : '{n} preguntas', { n: c.preguntas })}</span>
             </button>
             <button
               disabled={deshabilitado}
-              aria-label={`Borrar conversación: ${c.titulo}`}
+              aria-label={t('Borrar conversación: {titulo}', { titulo: c.titulo })}
               onClick={() => alBorrar(c)}
               className="flex w-10 flex-none items-center justify-center rounded-r-xl text-suave hover:text-[#ffb4a8] disabled:opacity-60"
             >
@@ -62,11 +63,11 @@ function Historial({ conversaciones, abierta, deshabilitado, alAbrir, alBorrar }
 
 function sugerencias(resumen, escaneoId) {
   const propias = []
-  if (escaneoId) propias.push('¿Qué significa este resultado y qué debería hacer?')
+  if (escaneoId) propias.push(t('¿Qué significa este resultado y qué debería hacer?'))
   const alta = resumen?.alertas.find((a) => a.nivel === 'alta')
-  if (alta) propias.push(`¿Qué hago con el Lote ${alta.lote}?`)
-  if (resumen?.recientes.length) propias.push('¿Cómo va mi finca?')
-  return [...propias, ...GENERALES].slice(0, 4)
+  if (alta) propias.push(t('¿Qué hago con el Lote {lote}?', { lote: alta.lote }))
+  if (resumen?.recientes.length) propias.push(t('¿Cómo va mi finca?'))
+  return [...propias, ...GENERALES.map((g) => t(g))].slice(0, 4)
 }
 
 function Burbuja({ mensaje }) {
@@ -77,7 +78,7 @@ function Burbuja({ mensaje }) {
         <p className="whitespace-pre-wrap">{mensaje.texto.replaceAll('**', '')}</p>
         {mensaje.citas?.length > 0 && (
           <div className="flex flex-col gap-1 border-t border-borde pt-2 text-xs text-medio">
-            <span className="font-semibold">{mensaje.tituloCitas}</span>
+            <span className="font-semibold">{t(mensaje.tituloCitas)}</span>
             {mensaje.citas.map((c) => (
               <a key={c.url} href={c.url} target="_blank" rel="noreferrer" className="truncate underline hover:text-texto">
                 {c.titulo}
@@ -140,7 +141,7 @@ export default function Asistente() {
   }
 
   async function borrar(c) {
-    if (!window.confirm(`¿Borrar la conversación "${c.titulo}"?`)) return
+    if (!window.confirm(t('¿Borrar la conversación "{titulo}"?', { titulo: c.titulo }))) return
     try {
       await borrarConversacion(c.id)
       if (c.id === conversacionId) nueva()
@@ -215,7 +216,7 @@ export default function Asistente() {
             acumulado = ''
             setParcial('')
           } else if (e.tipo === 'estado') {
-            setEstado(e.texto)
+            setEstado(t(e.texto))
           } else if (e.tipo === 'reemplazo') {
             acumulado = e.texto
             setParcial(acumulado)
@@ -225,12 +226,12 @@ export default function Asistente() {
           } else if (e.tipo === 'conversacion') {
             idActual = e.id
           } else if (e.tipo === 'error') {
-            fallo = e.mensaje
+            fallo = t(e.mensaje)
           }
         },
         control.signal,
       )
-      if (!fallo && !acumulado.trim()) fallo = 'El asistente no devolvió ninguna respuesta.'
+      if (!fallo && !acumulado.trim()) fallo = t('El asistente no devolvió ninguna respuesta.')
     } catch (e) {
       if (e.name === 'AbortError') return
       fallo = e.message
@@ -256,28 +257,29 @@ export default function Asistente() {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex flex-none items-center justify-between gap-3 border-b border-[#1b3428] px-4 py-3 lg:min-h-[76px] lg:px-9">
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <h1 className="font-sora text-xl font-extrabold lg:text-[22px]">Asistente</h1>
-            <span className="truncate text-[13px] text-suave">{escaneoId ? 'Pregunta sobre este resultado' : 'Pregunta sobre su cafetal · con Muse Spark'}</span>
+            <h1 className="font-sora text-xl font-extrabold lg:text-[22px]">{t('Asistente')}</h1>
+            <span className="truncate text-[13px] text-suave">{escaneoId ? t('Pregunta sobre este resultado') : t('Pregunta sobre su cafetal · con Muse Spark')}</span>
           </div>
           <div className="flex flex-none items-center gap-2">
             {modo === 'demo' && <span className="rounded-lg border border-ambar/60 bg-ambar/10 px-2 py-1 font-mono text-[11px] font-semibold text-ambar-claro sm:hidden">DEMO</span>}
             <div className="hidden sm:block"><InsigniaDemo modo={modo} /></div>
+            <SelectorIdioma className="lg:hidden" />
             <button
               disabled={respondiendo}
               onClick={nueva}
-              title="Nueva conversación"
+              title={t('Nueva conversación')}
               className="flex h-11 items-center gap-2 rounded-xl bg-ambar px-3 text-sm font-bold text-[#1a1206] hover:bg-[#ffc85e] disabled:opacity-60 md:px-4"
             >
               <Icono nombre="mas" tam={18} grosor={2.6} />
-              <span className="sr-only md:not-sr-only">Nueva conversación</span>
+              <span className="sr-only md:not-sr-only">{t('Nueva conversación')}</span>
             </button>
             <button
               ref={botonHistorial}
-              aria-label="Historial de conversaciones"
+              aria-label={t('Historial de conversaciones')}
               aria-controls="panel-historial"
               aria-expanded={verHistorial}
               onClick={() => setVerHistorial((v) => !v)}
-              title="Historial de conversaciones"
+              title={t('Historial de conversaciones')}
               className="flex size-11 items-center justify-center rounded-xl border border-borde-fuerte text-texto hover:border-ambar"
             >
               <Icono nombre="historial" tam={20} />
@@ -287,14 +289,14 @@ export default function Asistente() {
 
         {verHistorial && (
           <div className="fixed inset-0 z-50">
-            <button aria-label="Cerrar historial" onClick={cerrarHistorial} className="absolute inset-0 bg-black/60" />
+            <button aria-label={t('Cerrar historial')} onClick={cerrarHistorial} className="absolute inset-0 bg-black/60" />
             <aside ref={panelHistorial} id="panel-historial" role="dialog" aria-modal="true" aria-labelledby="titulo-historial" className="absolute inset-y-0 right-0 flex w-full max-w-[360px] flex-col gap-5 border-l border-borde-fuerte bg-bosque p-4 shadow-2xl sm:p-6">
               <div className="flex flex-none items-center justify-between gap-3 border-b border-borde pb-4">
                 <div>
-                  <h2 id="titulo-historial" className="font-sora text-lg font-bold">Historial</h2>
-                  <p className="mt-1 text-xs text-suave">Conversaciones de los últimos 30 días</p>
+                  <h2 id="titulo-historial" className="font-sora text-lg font-bold">{t('Historial')}</h2>
+                  <p className="mt-1 text-xs text-suave">{t('Conversaciones de los últimos 30 días')}</p>
                 </div>
-                <button aria-label="Cerrar historial" onClick={cerrarHistorial} autoFocus className="flex size-10 items-center justify-center rounded-xl border border-borde-fuerte hover:border-ambar">
+                <button aria-label={t('Cerrar historial')} onClick={cerrarHistorial} autoFocus className="flex size-10 items-center justify-center rounded-xl border border-borde-fuerte hover:border-ambar">
                   <Icono nombre="cerrar" tam={18} />
                 </button>
               </div>
@@ -309,11 +311,11 @@ export default function Asistente() {
           </div>
         )}
         <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div role="log" aria-live="polite" aria-label="Conversación" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-5 lg:px-9">
+          <div role="log" aria-live="polite" aria-label={t('Conversación')} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-5 lg:px-9">
             {mensajes.length === 0 && !respondiendo && (
               <div className="m-auto flex w-full max-w-[640px] flex-col gap-4 text-center">
-                <h2 className="font-sora text-2xl font-extrabold">¿En qué le ayudo hoy?</h2>
-                <p className="leading-relaxed text-medio">Conozco los escaneos de su finca y me apoyo en documentos de Cenicafé. Oriento, pero no reemplazo al extensionista.</p>
+                <h2 className="font-sora text-2xl font-extrabold">{t('¿En qué le ayudo hoy?')}</h2>
+                <p className="leading-relaxed text-medio">{t('Conozco los escaneos de su finca y me apoyo en documentos de Cenicafé. Oriento, pero no reemplazo al extensionista.')}</p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {sugerencias(resumen, escaneoId).map((s) => (
                     <button key={s} onClick={() => enviar(s)} className="min-h-14 rounded-xl border border-borde-fuerte bg-tarjeta px-4 py-3 text-left text-sm font-medium hover:border-ambar">
@@ -327,7 +329,7 @@ export default function Asistente() {
               <Burbuja key={i} mensaje={m} />
             ))}
             {respondiendo && (parcial ? <Burbuja mensaje={{ rol: 'asistente', texto: parcial }} /> : (
-              <p role="status" className="rl-respirar text-sm text-medio">{estado ?? 'Pensando…'}</p>
+              <p role="status" className="rl-respirar text-sm text-medio">{estado ?? t('Pensando…')}</p>
             ))}
             {error && <Error mensaje={error.mensaje} alReintentar={() => enviar(error.pregunta)} />}
             <div ref={fin} />
@@ -341,13 +343,13 @@ export default function Asistente() {
             className="flex flex-none flex-col gap-2 border-t border-[#1b3428] px-4 py-3 lg:px-9"
           >
             <div className="flex items-end gap-2">
-              <label htmlFor="pregunta" className="sr-only">Su pregunta</label>
+              <label htmlFor="pregunta" className="sr-only">{t('Su pregunta')}</label>
               <textarea
                 id="pregunta"
                 rows={1}
                 value={borrador}
                 maxLength={MAX_PREGUNTA}
-                placeholder="Escriba su pregunta…"
+                placeholder={t('Escriba su pregunta…')}
                 onChange={(e) => setBorrador(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -359,7 +361,7 @@ export default function Asistente() {
               />
               <button
                 type="submit"
-                aria-label="Enviar pregunta"
+                aria-label={t('Enviar pregunta')}
                 disabled={respondiendo || !borrador.trim()}
                 className="flex size-12 flex-none items-center justify-center rounded-xl bg-ambar text-[#1a1206] hover:bg-[#ffc85e] disabled:opacity-50"
               >
@@ -367,11 +369,11 @@ export default function Asistente() {
               </button>
             </div>
             <p className="text-xs leading-relaxed text-suave">
-              Orientación general: el manejo con productos lo define su extensionista. Base de consulta:{' '}
+              {t('Orientación general: el manejo con productos lo define su extensionista. Base de consulta:')}{' '}
               {BASE.map(([titulo, url], i) => (
                 <span key={url}>
-                  {i > 0 && ' y '}
-                  <a href={url} target="_blank" rel="noreferrer" className="underline hover:text-texto">{titulo}</a>
+                  {i > 0 && ` ${t('y')} `}
+                  <a href={url} target="_blank" rel="noreferrer" className="underline hover:text-texto">{t(titulo)}</a>
                 </span>
               ))}
               .

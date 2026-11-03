@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { borrarMisDatos, obtenerResumen } from '../api.js'
-import { Error, Icono, InsigniaDemo, NavInferior, NavLateral, fechaCorta, num } from '../components/ui.jsx'
+import { Error, Icono, InsigniaDemo, NavInferior, NavLateral, SelectorIdioma, fechaCorta, num } from '../components/ui.jsx'
+import { locale, t } from '../i18n.js'
 import { colorNivel } from './Roya.jsx'
 
 // Lotes dibujados sobre mi-finca.jpg (1513×1040), siguiendo sus caminos.
@@ -26,9 +27,9 @@ function Indicador({ titulo, valor, detalle, tono }) {
 
 function Mapa({ lotes, elegido, setElegido }) {
   return (
-    <section aria-label="Mapa de lotes" className="relative flex min-h-[360px] min-w-0 flex-col overflow-hidden rounded-[20px] border border-borde bg-visor">
+    <section aria-label={t('Mapa de lotes')} className="relative flex min-h-[360px] min-w-0 flex-col overflow-hidden rounded-[20px] border border-borde bg-visor">
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
-        <h2 className="font-sora text-lg font-semibold">Mapa de lotes</h2>
+        <h2 className="font-sora text-lg font-semibold">{t('Mapa de lotes')}</h2>
         <div className="flex flex-wrap gap-3 text-xs text-medio">
           {[
             ['Sin escaneo', '#6F8A7A'],
@@ -37,10 +38,10 @@ function Mapa({ lotes, elegido, setElegido }) {
             ['Moderada', colorNivel('Moderada')],
             ['Alta', colorNivel('Alta')],
             ['Severa', colorNivel('Severa')],
-          ].map(([t, c]) => (
-            <span key={t} className="flex items-center gap-1.5">
+          ].map(([nombre, c]) => (
+            <span key={nombre} className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-[3px]" style={{ background: c }} />
-              {t}
+              {t(nombre)}
             </span>
           ))}
         </div>
@@ -52,7 +53,7 @@ function Mapa({ lotes, elegido, setElegido }) {
           transition={{ duration: 1 }}
           className="relative aspect-[1513/1040] max-h-full w-full max-w-[720px] overflow-hidden rounded-xl shadow-2xl shadow-black/60"
         >
-          <img src="/img/mi-finca.jpg" alt="Vista aérea de la finca con cuatro lotes de café separados por caminos" className="absolute inset-0 size-full object-cover" />
+          <img src="/img/mi-finca.jpg" alt={t('Vista aérea de la finca con cuatro lotes de café separados por caminos')} className="absolute inset-0 size-full object-cover" />
           <svg viewBox="0 0 1513 1040" preserveAspectRatio="none" className="absolute inset-0 size-full">
             {lotes.map((l) => {
               const color = l.nivel ? colorNivel(l.nivel) : '#6F8A7A'
@@ -63,7 +64,7 @@ function Mapa({ lotes, elegido, setElegido }) {
                     points={POLIGONOS[l.id]}
                     role="button"
                     tabIndex={0}
-                    aria-label={`${l.nombre}${l.nivel ? `, roya ${l.roya}%, ${l.nivel}` : ', sin escaneos'}`}
+                    aria-label={l.nivel ? t('{lote}, roya {p}%, {nivel}', { lote: t(l.nombre), p: num(l.roya), nivel: t(l.nivel) }) : t('{lote}, sin escaneos', { lote: t(l.nombre) })}
                     aria-pressed={activo}
                     onClick={() => setElegido(l.id)}
                     onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setElegido(l.id)}
@@ -74,7 +75,7 @@ function Mapa({ lotes, elegido, setElegido }) {
                     className="cursor-pointer outline-none transition-[fill-opacity] hover:fill-opacity-40 focus-visible:stroke-white"
                   />
                   <text x={CENTROS[l.id][0]} y={CENTROS[l.id][1]} textAnchor="middle" fill="#FFFFFF" stroke="#07140D" strokeWidth="8" paintOrder="stroke" className="pointer-events-none font-sora text-[48px] font-extrabold">
-                    {l.nombre}
+                    {t(l.nombre)}
                   </text>
                 </g>
               )
@@ -91,7 +92,7 @@ function Evolucion({ lote }) {
   const puntos = lote.evolucion
   const [foco, setFoco] = useState(null)
   if (puntos.length === 0) {
-    return <p className="py-6 text-sm text-medio">Este lote todavía no tiene escaneos de roya.</p>
+    return <p className="py-6 text-sm text-medio">{t('Este lote todavía no tiene escaneos de roya.')}</p>
   }
   const A = 400, H = 130, M = 12
   const tiempos = puntos.map((p) => new Date(p.fecha).getTime())
@@ -110,7 +111,7 @@ function Evolucion({ lote }) {
       </div>
       <svg
         role="img"
-        aria-label={`Roya en ${lote.nombre}: ${puntos.map((p) => `${p.porcentaje}%`).join(', ')}; último valor ${ultimo.porcentaje}%`}
+        aria-label={t('Roya en {lote}: {valores}; último valor {ultimo}%', { lote: t(lote.nombre), valores: puntos.map((p) => `${num(p.porcentaje)}%`).join(', '), ultimo: num(ultimo.porcentaje) })}
         viewBox={`0 0 ${A} ${H}`}
         className="h-[120px] w-full"
         onMouseLeave={() => setFoco(null)}
@@ -138,8 +139,8 @@ function Evolucion({ lote }) {
 }
 
 function etiquetaEscaneo(e) {
-  if (e.tipo === 'roya') return e.medicion.valida === false ? 'Sin medición' : `${num(e.medicion.porcentaje)}% · ${e.medicion.nivel}`
-  return e.medicion.valida === false ? 'Sin conteo' : `${e.medicion.porcentaje_maduro}% maduro`
+  if (e.tipo === 'roya') return e.medicion.valida === false ? t('Sin medición') : `${num(e.medicion.porcentaje)}% · ${t(e.medicion.nivel)}`
+  return e.medicion.valida === false ? t('Sin conteo') : t('{p}% maduro', { p: e.medicion.porcentaje_maduro })
 }
 
 export default function Finca() {
@@ -159,7 +160,7 @@ export default function Finca() {
 
   const lote = datos?.lotes.find((l) => l.id === elegido)
   const i = datos?.indicadores
-  const hoy = new Intl.DateTimeFormat('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
+  const hoy = new Intl.DateTimeFormat(locale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())
 
   return (
     <div className="flex min-h-dvh lg:h-dvh lg:overflow-hidden">
@@ -169,19 +170,20 @@ export default function Finca() {
           <header className="flex flex-wrap items-end justify-between gap-3">
             <div className="flex flex-col gap-1">
               <span className="font-mono text-xs tracking-[1.5px] text-ambar uppercase">{hoy}</span>
-              <h1 className="font-sora text-[28px] font-extrabold lg:text-[34px]">{datos?.es_ejemplo ? 'Así se vería su finca' : 'Así está su finca hoy'}</h1>
+              <h1 className="font-sora text-[28px] font-extrabold lg:text-[34px]">{datos?.es_ejemplo ? t('Así se vería su finca') : t('Así está su finca hoy')}</h1>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <InsigniaDemo modo={datos?.modo} />
+              <SelectorIdioma className="lg:hidden" />
               <Link to="/camara" className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-ambar px-5 font-bold text-[#1a1206] hover:bg-[#ffc85e]">
                 <Icono nombre="mas" tam={18} grosor={2.4} />
-                Nuevo escaneo
+                {t('Nuevo escaneo')}
               </Link>
             </div>
           </header>
 
           {error && <Error mensaje={error} alReintentar={cargar} />}
-          {!datos && !error && <p role="status" className="text-medio">Cargando su finca…</p>}
+          {!datos && !error && <p role="status" className="text-medio">{t('Cargando su finca…')}</p>}
 
           {datos && (
             <>
@@ -189,37 +191,37 @@ export default function Finca() {
                 <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ambar/50 bg-[#2a220e] px-4 py-3">
                   <span className="flex items-start gap-3 text-sm text-ambar-claro">
                     <Icono nombre="alerta" className="mt-0.5 flex-none" />
-                    <span><b>Finca de ejemplo.</b> Estas cifras son ilustrativas, no son mediciones reales. Con su primer escaneo, este panel pasa a mostrar solo sus datos.</span>
+                    <span><b>{t('Finca de ejemplo.')}</b> {t('Estas cifras son ilustrativas, no son mediciones reales. Con su primer escaneo, este panel pasa a mostrar solo sus datos.')}</span>
                   </span>
-                  <Link to="/roya" className="text-sm font-bold whitespace-nowrap text-ambar underline underline-offset-4">Hacer mi primer escaneo</Link>
+                  <Link to="/roya" className="text-sm font-bold whitespace-nowrap text-ambar underline underline-offset-4">{t('Hacer mi primer escaneo')}</Link>
                 </div>
               )}
               {datos.hay_fotos_ejemplo && (
                 <div role="status" className="flex items-start gap-3 rounded-2xl border border-ambar/50 bg-[#2a220e] px-4 py-3 text-sm text-ambar-claro">
                   <Icono nombre="alerta" className="mt-0.5 flex-none" />
-                  <span><b>Incluye fotos de ejemplo.</b> Esos resultados muestran cómo funciona la app, no el estado de su cafetal. Puede borrarlos con «Borrar mis datos» en Mi finca.</span>
+                  <span><b>{t('Incluye fotos de ejemplo.')}</b> {t('Esos resultados muestran cómo funciona la app, no el estado de su cafetal. Puede borrarlos con «Borrar mis datos» en Mi finca.')}</span>
                 </div>
               )}
-              <section aria-label="Resumen" className="grid flex-none grid-cols-2 gap-3 xl:grid-cols-4">
+              <section aria-label={t('Resumen')} className="grid flex-none grid-cols-2 gap-3 xl:grid-cols-4">
                 <Indicador
-                  titulo="Roya promedio"
+                  titulo={t('Roya promedio')}
                   valor={i.roya_promedio !== null ? `${num(i.roya_promedio)}%` : null}
-                  detalle={i.cambio_roya !== null ? `${i.cambio_roya > 0 ? 'sube' : 'cambia'} ${num(i.cambio_roya)} pts en 2 semanas` : 'Sin datos para comparar'}
+                  detalle={i.cambio_roya !== null ? t(i.cambio_roya > 0 ? 'sube {n} pts en 2 semanas' : 'cambia {n} pts en 2 semanas', { n: num(i.cambio_roya) }) : t('Sin datos para comparar')}
                   tono={i.cambio_roya > 0 ? 'mala' : undefined}
                 />
                 <Indicador
-                  titulo="Cerezas maduras"
+                  titulo={t('Cerezas maduras')}
                   valor={i.maduro_promedio !== null ? `${i.maduro_promedio}%` : null}
-                  detalle={i.lote_mas_maduro ? `Más avanzado: ${i.lote_mas_maduro}` : 'Sin escaneos de racimo'}
+                  detalle={i.lote_mas_maduro ? t('Más avanzado: {lote}', { lote: t(i.lote_mas_maduro) }) : t('Sin escaneos de racimo')}
                 />
-                <Indicador titulo="Escaneos este mes" valor={i.escaneos_mes} detalle={`en ${datos.lotes.length} lotes`} />
-                <Indicador titulo="Lotes por revisar" valor={i.lotes_por_revisar} detalle="Sin escaneo hace 7 días o más" />
+                <Indicador titulo={t('Escaneos este mes')} valor={i.escaneos_mes} detalle={t('en {n} lotes', { n: datos.lotes.length })} />
+                <Indicador titulo={t('Lotes por revisar')} valor={i.lotes_por_revisar} detalle={t('Sin escaneo hace 7 días o más')} />
               </section>
 
               <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
                 <Mapa lotes={datos.lotes} elegido={elegido} setElegido={setElegido} />
 
-                <section aria-label="Actividad" className="flex min-h-0 flex-col gap-3 xl:overflow-y-auto">
+                <section aria-label={t('Actividad')} className="flex min-h-0 flex-col gap-3 xl:overflow-y-auto">
                   {datos.alertas.slice(0, 2).map((a) => (
                     <button
                       key={a.lote}
@@ -230,37 +232,37 @@ export default function Finca() {
                     >
                       <span className={`flex items-center gap-2 font-sora text-[15px] font-semibold ${a.nivel === 'alta' ? 'text-[#ffc9ae]' : 'text-ambar-claro'}`}>
                         <Icono nombre="alerta" tam={18} />
-                        {a.titulo}
+                        {t(a.titulo)}
                       </span>
-                      <span className={`text-sm leading-relaxed ${a.nivel === 'alta' ? 'text-[#f2d6c9]' : 'text-medio'}`}>{a.texto}</span>
+                      <span className={`text-sm leading-relaxed ${a.nivel === 'alta' ? 'text-[#f2d6c9]' : 'text-medio'}`}>{t(a.texto)}</span>
                     </button>
                   ))}
 
                   {lote && (
                     <div className="flex flex-none flex-col gap-2 rounded-[18px] border border-borde bg-tarjeta px-4 py-3.5">
                       <div className="flex items-center justify-between gap-3">
-                        <h2 className="font-sora text-[15px] font-semibold">Evolución de la roya · {lote.nombre}</h2>
+                        <h2 className="font-sora text-[15px] font-semibold">{t('Evolución de la roya · {lote}', { lote: t(lote.nombre) })}</h2>
                         <Link to={`/camara?tipo=roya&lote=${lote.id}`} className="flex-none text-sm font-semibold text-ambar hover:text-[#ffd27a]">
-                          Escanear
+                          {t('Escanear')}
                         </Link>
                       </div>
                       <Evolucion lote={lote} />
                       {lote.muestra.hojas > 0 && (
                         <p className="border-t border-borde pt-2 text-xs leading-relaxed text-medio">
-                          Últimos 30 días: <b className="text-texto">{lote.muestra.con_roya} de {lote.muestra.hojas} hojas con roya</b> ({lote.muestra.incidencia}%) y severidad media de {num(lote.muestra.severidad)}%.
-                          Orientativo: el monitoreo de Cenicafé evalúa 50 árboles por lote.
+                          {t('Últimos 30 días:')} <b className="text-texto">{t('{con} de {total} hojas con roya', { con: lote.muestra.con_roya, total: lote.muestra.hojas })}</b> {t('({incidencia}%) y severidad media de {severidad}%.', { incidencia: lote.muestra.incidencia, severidad: num(lote.muestra.severidad) })}{' '}
+                          {t('Orientativo: el monitoreo de Cenicafé evalúa 50 árboles por lote.')}
                         </p>
                       )}
                     </div>
                   )}
 
                   <div className="flex flex-none flex-col rounded-[18px] border border-borde bg-tarjeta px-4 py-2">
-                    <h2 className="py-1.5 font-sora text-[15px] font-semibold">Últimos escaneos</h2>
-                    {datos.recientes.length === 0 && <p className="pb-2 text-sm text-medio">Todavía no hay escaneos.</p>}
+                    <h2 className="py-1.5 font-sora text-[15px] font-semibold">{t('Últimos escaneos')}</h2>
+                    {datos.recientes.length === 0 && <p className="pb-2 text-sm text-medio">{t('Todavía no hay escaneos.')}</p>}
                     {datos.recientes.slice(0, 3).map((e) => {
                       const contenido = (
                         <>
-                          <span className="text-claro">{e.tipo === 'roya' ? 'Hoja' : 'Racimo'} · Lote {e.lote}{e.foto_ejemplo && ' · foto de ejemplo'}</span>
+                          <span className="text-claro">{t(e.tipo === 'roya' ? 'Hoja · Lote {lote}' : 'Racimo · Lote {lote}', { lote: e.lote })}{e.foto_ejemplo && ` · ${t('foto de ejemplo')}`}</span>
                           <span className="font-mono text-xs text-medio">{etiquetaEscaneo(e)}</span>
                         </>
                       )
@@ -274,7 +276,7 @@ export default function Finca() {
                     {!datos.es_ejemplo && datos.recientes.length > 0 && (
                       <button
                         onClick={async () => {
-                          if (!window.confirm('¿Borrar todos sus escaneos, fotos y conversaciones? No se puede deshacer.')) return
+                          if (!window.confirm(t('¿Borrar todos sus escaneos, fotos y conversaciones? No se puede deshacer.'))) return
                           try {
                             await borrarMisDatos()
                             setElegido(null)
@@ -285,7 +287,7 @@ export default function Finca() {
                         }}
                         className="min-h-10 self-start py-2 text-xs font-semibold text-medio underline underline-offset-4 hover:text-white"
                       >
-                        Borrar mis datos
+                        {t('Borrar mis datos')}
                       </button>
                     )}
                   </div>
