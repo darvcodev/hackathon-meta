@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { analizar } from '../api.js'
-import { AVISO_FOTOS, Error, Icono, InsigniaDemo, LOTES, useModo } from '../components/ui.jsx'
+import { AVISO_FOTOS, Error, Icono, InsigniaDemo, LOTES, SelectorIdioma, useModo } from '../components/ui.jsx'
+import { t } from '../i18n.js'
 
 const GUIA = { roya: 'Una sola hoja · por el envés', maduracion: 'Un racimo · de cerca y de frente' }
 
@@ -72,31 +73,34 @@ export default function Camara() {
         </div>
 
         <div className="absolute inset-x-5 top-[max(20px,env(safe-area-inset-top))] flex items-center justify-between">
-          <Link to="/finca" aria-label="Cerrar cámara" className="flex size-11 items-center justify-center rounded-full bg-bosque/70">
+          <Link to="/finca" aria-label={t('Cerrar cámara')} className="flex size-11 items-center justify-center rounded-full bg-bosque/70">
             <Icono nombre="cerrar" grosor={2.4} />
           </Link>
+          <div className="flex items-center gap-2">
+          <SelectorIdioma className="bg-bosque/75" />
           <label className="flex h-11 items-center gap-2 rounded-full bg-bosque/75 pr-1.5 pl-4 text-sm font-semibold">
-            Lote
+            {t('Lote')}
             <select
               value={lote}
               onChange={(e) => setLote(Number(e.target.value))}
               className="h-[34px] rounded-full bg-ambar px-2.5 font-bold text-[#1a1206]"
             >
               {LOTES.map((l) => (
-                <option key={l} value={l}>Lote {l}</option>
+                <option key={l} value={l}>{t('Lote {n}', { n: l })}</option>
               ))}
             </select>
           </label>
+          </div>
         </div>
 
         <div className="absolute inset-x-0 top-[calc(max(20px,env(safe-area-inset-top))+56px)] flex flex-col items-center gap-2 px-4">
           <span className="rounded-xl bg-bosque/80 px-4 py-2.5 text-center text-sm font-medium">
-            {analizando ? 'Analizando la foto…' : GUIA[tipo]}
+            {analizando ? t('Analizando la foto…') : t(GUIA[tipo])}
           </span>
           <InsigniaDemo modo={modo} />
           {!enVivo && !analizando && (
             <span className="rounded-xl bg-bosque/80 px-3 py-1.5 text-center text-xs text-medio">
-              Imagen de referencia. Toque el botón para abrir la cámara o elegir una foto.
+              {t('Imagen de referencia. Toque el botón para abrir la cámara o elegir una foto.')}
             </span>
           )}
         </div>
@@ -107,7 +111,7 @@ export default function Camara() {
               <Error mensaje={error} />
             </div>
           )}
-          <div role="group" aria-label="Qué va a escanear" className="flex rounded-full bg-[#12291d] p-1">
+          <div role="group" aria-label={t('Qué va a escanear')} className="flex rounded-full bg-[#12291d] p-1">
             {[
               ['roya', 'Hoja · roya'],
               ['maduracion', 'Racimo · maduración'],
@@ -119,14 +123,14 @@ export default function Camara() {
                 onClick={() => setTipo(id)}
                 className={`h-11 rounded-full px-4 text-sm whitespace-nowrap ${tipo === id ? 'bg-ambar font-bold text-[#1a1206]' : 'font-semibold text-claro'}`}
               >
-                {texto}
+                {t(texto)}
               </button>
             ))}
           </div>
           <div className="flex w-full items-center justify-between">
             <button
               type="button"
-              aria-label="Subir foto de la galería"
+              aria-label={t('Subir foto de la galería')}
               disabled={analizando}
               onClick={() => {
                 galeria.current.removeAttribute('capture')
@@ -138,18 +142,18 @@ export default function Camara() {
             </button>
             <button
               type="button"
-              aria-label="Tomar foto y analizar"
+              aria-label={t('Tomar foto y analizar')}
               disabled={analizando}
               onClick={disparar}
               className="flex size-[84px] items-center justify-center rounded-full border-4 border-ambar disabled:opacity-60"
             >
               <span className={`size-16 rounded-full bg-ambar ${analizando ? 'rl-respirar' : ''}`} />
             </button>
-            <Link to="/finca" aria-label="Ver Mi finca" className="flex size-[52px] items-center justify-center rounded-[14px] border border-[#2c4f3b] bg-tarjeta">
+            <Link to="/finca" aria-label={t('Ver Mi finca')} className="flex size-[52px] items-center justify-center rounded-[14px] border border-[#2c4f3b] bg-tarjeta">
               <Icono nombre="casa" tam={22} />
             </Link>
           </div>
-          <p className="text-center text-[11px] leading-snug text-suave">{AVISO_FOTOS[modo] ?? AVISO_FOTOS.desconocido}</p>
+          <p className="text-center text-[11px] leading-snug text-suave">{t(AVISO_FOTOS[modo] ?? AVISO_FOTOS.desconocido)}</p>
         </div>
 
         <input

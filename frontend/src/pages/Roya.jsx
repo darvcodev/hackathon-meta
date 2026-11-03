@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { analizar, analizarEjemplo, obtenerEscaneo } from '../api.js'
 import { AVISO_FOTOS, BarraPantalla, BotonesFoto, CreditoFoto, Error, Foto, GaleriaEjemplos, Icono, NavInferior, SelectorLote, Tarjeta, fechaCorta, num, useModo } from '../components/ui.jsx'
+import { t } from '../i18n.js'
 
 const FOTO_EJEMPLO = '/img/escaner-roya.jpg'
 const PASOS = ['Hoja recortada', 'Lesiones segmentadas', 'Área medida', 'Explicado']
@@ -23,7 +24,7 @@ export function colorNivel(nivel) {
 
 function Pasos({ activo }) {
   return (
-    <ol aria-label="Pasos del análisis" className="hidden gap-2 text-[13px] xl:flex">
+    <ol aria-label={t('Pasos del análisis')} className="hidden gap-2 text-[13px] xl:flex">
       {PASOS.map((paso, i) => {
         const hecho = activo === null || i < activo
         const actual = i === activo
@@ -35,7 +36,7 @@ function Pasos({ activo }) {
             }`}
           >
             {hecho && <Icono nombre="check" tam={16} grosor={3} className="text-exito" />}
-            {paso}
+            {t(paso)}
           </li>
         )
       })}
@@ -48,8 +49,8 @@ function Comparador({ escaneo }) {
   const area = useRef(null)
   if (!escaneo.medicion.valida && !escaneo.vista_general) {
     return (
-      <section aria-label="Foto enviada" className="relative min-h-[320px] flex-1 overflow-hidden rounded-3xl border border-borde bg-visor">
-        <Foto src={escaneo.imagen_url} ancho={escaneo.ancho} alto={escaneo.alto} alt="Foto enviada, sin medición" />
+      <section aria-label={t('Foto enviada')} className="relative min-h-[320px] flex-1 overflow-hidden rounded-3xl border border-borde bg-visor">
+        <Foto src={escaneo.imagen_url} ancho={escaneo.ancho} alto={escaneo.alto} alt={t('Foto enviada, sin medición')} />
       </section>
     )
   }
@@ -58,9 +59,9 @@ function Comparador({ escaneo }) {
     setCorte(Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100)))
   }
   return (
-    <section aria-label="Comparación de la hoja" className="flex min-h-0 flex-1 flex-col gap-3">
+    <section aria-label={t('Comparación de la hoja')} className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="relative min-h-[320px] flex-1 overflow-hidden rounded-3xl border border-borde bg-visor">
-        <Foto src={escaneo.imagen_url} ancho={escaneo.ancho} alto={escaneo.alto} alt="Foto original de la hoja">
+        <Foto src={escaneo.imagen_url} ancho={escaneo.ancho} alto={escaneo.alto} alt={t('Foto original de la hoja')}>
           <div
             ref={area}
             className="absolute inset-0 cursor-ew-resize touch-none"
@@ -72,7 +73,7 @@ function Comparador({ escaneo }) {
           >
             <img
               src={escaneo.overlay_url}
-              alt="Análisis: hoja contorneada en verde y lesiones resaltadas en naranja"
+              alt={t('Análisis: hoja contorneada en verde y lesiones resaltadas en naranja')}
               draggable={false}
               className="absolute inset-0 size-full select-none"
               style={{ clipPath: `inset(0 ${100 - corte}% 0 0)` }}
@@ -101,11 +102,11 @@ function Comparador({ escaneo }) {
             </div>
           </div>
         </Foto>
-        <span className="absolute top-4 left-4 rounded-lg bg-bosque/85 px-3 py-1.5 font-mono text-xs text-ambar-claro">ANÁLISIS</span>
-        <span className="absolute top-4 right-4 rounded-lg bg-bosque/85 px-3 py-1.5 font-mono text-xs">FOTO ORIGINAL</span>
+        <span className="absolute top-4 left-4 rounded-lg bg-bosque/85 px-3 py-1.5 font-mono text-xs text-ambar-claro">{t('ANÁLISIS')}</span>
+        <span className="absolute top-4 right-4 rounded-lg bg-bosque/85 px-3 py-1.5 font-mono text-xs">{t('FOTO ORIGINAL')}</span>
       </div>
       <label className="flex flex-none items-center gap-4 text-sm text-medio">
-        <span className="flex-none">Deslice para comparar</span>
+        <span className="flex-none">{t('Deslice para comparar')}</span>
         <input
           type="range"
           min="0"
@@ -124,7 +125,7 @@ function Medidor({ medicion }) {
   const fraccion = Math.min(medicion.porcentaje / 50, 1)
   return (
     <div className="relative h-[100px] w-[170px] flex-none">
-      <svg role="img" aria-label={`Medidor de severidad en ${medicion.porcentaje} por ciento`} width="170" height="100" viewBox="0 0 170 100">
+      <svg role="img" aria-label={t('Medidor de severidad en {p} por ciento', { p: num(medicion.porcentaje) })} width="170" height="100" viewBox="0 0 170 100">
         <path d="M15 90 A70 70 0 0 1 155 90" fill="none" stroke="#1F3A2B" strokeWidth="14" strokeLinecap="round" />
         <motion.path
           d="M15 90 A70 70 0 0 1 155 90"
@@ -153,7 +154,7 @@ const ESCALA = [
 
 function Escala({ nivel }) {
   return (
-    <div className="flex flex-col gap-1.5" role="img" aria-label={`Nivel ${nivel} en una escala de cinco niveles`}>
+    <div className="flex flex-col gap-1.5" role="img" aria-label={t('Nivel {nivel} en una escala de cinco niveles', { nivel: t(nivel) })}>
       <div className="flex gap-1">
         {ESCALA.map(([corto, nombre, limite]) => (
           <div key={nombre} className="flex min-w-0 flex-1 flex-col gap-1">
@@ -161,7 +162,7 @@ function Escala({ nivel }) {
               className={`h-2 rounded-full ${nombre === nivel ? '' : 'opacity-25'}`}
               style={{ background: colorNivel(nombre) }}
             />
-            <span className={`truncate text-[10.5px] ${nombre === nivel ? 'font-bold text-texto' : 'text-suave'}`}>{corto}</span>
+            <span className={`truncate text-[10.5px] ${nombre === nivel ? 'font-bold text-texto' : 'text-suave'}`}>{t(corto)}</span>
             <span className="font-mono text-[10px] text-suave">{limite === 100 ? '24% +' : `< ${num(limite)}%`}</span>
           </div>
         ))}
@@ -192,8 +193,8 @@ function Lista({ elementos, numerada }) {
 }
 
 function textoCambio(c) {
-  if (c.cambio === 0) return 'Se mantiene igual'
-  return c.cambio > 0 ? `Sube ${num(c.cambio)} puntos` : `Baja ${num(Math.abs(c.cambio))} puntos`
+  if (c.cambio === 0) return t('Se mantiene igual')
+  return c.cambio > 0 ? t('Sube {n} puntos', { n: num(c.cambio) }) : t('Baja {n} puntos', { n: num(Math.abs(c.cambio)) })
 }
 
 function Resultado({ escaneo, modo }) {
@@ -201,16 +202,16 @@ function Resultado({ escaneo, modo }) {
   const hallazgos = interpretacion.hallazgos ?? []
   const pasos = interpretacion.pasos ?? []
   const muse = []
-  if (interpretacion.signos_de_roya != null) muse.push(`Signos de roya: ${interpretacion.signos_de_roya ? 'sí' : 'no'}`)
-  if (interpretacion.calidad_foto) muse.push(`Calidad de la foto: ${interpretacion.calidad_foto}`)
-  if (interpretacion.cara_visible === 'haz' || interpretacion.cara_visible === 'enves') muse.push(`Cara visible: ${interpretacion.cara_visible === 'enves' ? 'envés' : 'haz'}`)
+  if (interpretacion.signos_de_roya != null) muse.push(t('Signos de roya: {valor}', { valor: t(interpretacion.signos_de_roya ? 'sí' : 'no') }))
+  if (interpretacion.calidad_foto) muse.push(t('Calidad de la foto: {valor}', { valor: t(interpretacion.calidad_foto) }))
+  if (interpretacion.cara_visible === 'haz' || interpretacion.cara_visible === 'enves') muse.push(t('Cara visible: {valor}', { valor: t(interpretacion.cara_visible === 'enves' ? 'envés' : 'haz') }))
   const hayTamanos = medicion.pequenas !== undefined && medicion.lesiones > 0
   return (
-    <section aria-label="Resultado" className="flex min-h-0 flex-col gap-3 lg:overflow-y-auto">
+    <section aria-label={t('Resultado')} className="flex min-h-0 flex-col gap-3 lg:overflow-y-auto">
       {avisos.map((aviso) => (
         <div key={aviso} role="status" className="flex flex-none items-start gap-3 rounded-2xl border border-ambar/50 bg-[#2a220e] px-4 py-3 text-sm text-ambar-claro">
           <Icono nombre="alerta" className="mt-0.5 flex-none" />
-          {aviso}
+          {t(aviso)}
         </div>
       ))}
       {interpretacion.resumen && <p className="flex-none font-sora text-lg leading-snug font-semibold text-texto">{interpretacion.resumen}</p>}
@@ -219,43 +220,43 @@ function Resultado({ escaneo, modo }) {
           <div className="flex flex-wrap items-center gap-5">
             <Medidor medicion={medicion} />
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-              <span className="text-[13px] text-suave">Hoja afectada · estimado con máscaras de SAM</span>
+              <span className="text-[13px] text-suave">{t('Hoja afectada · estimado con máscaras de SAM')}</span>
               <span className="flex items-center gap-2 font-sora text-2xl font-extrabold">
                 <span className="size-3 rounded-full" style={{ background: colorNivel(medicion.nivel) }} />
-                {medicion.nivel}
+                {t(medicion.nivel)}
               </span>
-              {medicion.confianza !== null && <span className="font-mono text-xs text-medio">CONFIANZA SAM {num(medicion.confianza)}</span>}
+              {medicion.confianza !== null && <span className="font-mono text-xs text-medio">{t('CONFIANZA SAM')} {num(medicion.confianza)}</span>}
             </div>
           </div>
           <Escala nivel={medicion.nivel} />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Dato titulo="Lesiones" valor={medicion.lesiones} detalle={hayTamanos ? `${medicion.grandes} grandes · ${medicion.medianas} medianas · ${medicion.pequenas} pequeñas` : null} />
-            {medicion.mayor_lesion != null && <Dato titulo="Mayor lesión" valor={`${num(medicion.mayor_lesion)}%`} detalle="de la hoja" />}
-            {medicion.area_sana != null && <Dato titulo="Área sin lesiones" valor={`${num(medicion.area_sana)}%`} detalle="de la hoja" />}
-            {medicion.clase_dae !== null && <Dato titulo="Clase Cenicafé" valor={`${medicion.clase_dae}%`} detalle={<a href={DAE_CENICAFE} target="_blank" rel="noreferrer" className="underline hover:text-texto">Ver diagrama</a>} />}
+            <Dato titulo={t('Lesiones')} valor={medicion.lesiones} detalle={hayTamanos ? t('{g} grandes · {m} medianas · {p} pequeñas', { g: medicion.grandes, m: medicion.medianas, p: medicion.pequenas }) : null} />
+            {medicion.mayor_lesion != null && <Dato titulo={t('Mayor lesión')} valor={`${num(medicion.mayor_lesion)}%`} detalle={t('de la hoja')} />}
+            {medicion.area_sana != null && <Dato titulo={t('Área sin lesiones')} valor={`${num(medicion.area_sana)}%`} detalle={t('de la hoja')} />}
+            {medicion.clase_dae !== null && <Dato titulo={t('Clase Cenicafé')} valor={`${medicion.clase_dae}%`} detalle={<a href={DAE_CENICAFE} target="_blank" rel="noreferrer" className="underline hover:text-texto">{t('Ver diagrama')}</a>} />}
           </div>
           {comparacion && (
             <p className="border-t border-borde pt-3 text-sm text-claro">
-              <b className="text-texto">{textoCambio(comparacion)}</b> frente al escaneo anterior del Lote {escaneo.lote}, que tenía {num(comparacion.valor)}% ({fechaCorta(comparacion.fecha)}).
+              <b className="text-texto">{textoCambio(comparacion)}</b> {t('frente al escaneo anterior del Lote {lote}, que tenía {valor}% ({fecha}).', { lote: escaneo.lote, valor: num(comparacion.valor), fecha: fechaCorta(comparacion.fecha) })}
             </p>
           )}
-          <p className="text-xs leading-relaxed text-suave">Es una estimación de esta foto y el nivel es orientativo.</p>
+          <p className="text-xs leading-relaxed text-suave">{t('Es una estimación de esta foto y el nivel es orientativo.')}</p>
         </div>
       ) : (
         <div className="flex flex-none flex-col gap-1 rounded-[22px] border border-borde bg-tarjeta px-6 py-5">
-          <span className="font-sora text-xl font-extrabold">{general ? 'Revisión general de la foto' : 'Sin medición'}</span>
-          <span className="text-sm text-medio">Esta foto no suma cifras al historial del lote.</span>
+          <span className="font-sora text-xl font-extrabold">{general ? t('Revisión general de la foto') : t('Sin medición')}</span>
+          <span className="text-sm text-medio">{t('Esta foto no suma cifras al historial del lote.')}</span>
         </div>
       )}
       {general && (
         <div className="flex flex-none flex-col gap-2 rounded-[22px] border border-borde bg-tarjeta px-5 py-4">
-          <h2 className="font-sora text-[15px] font-semibold text-ambar">Hojas revisadas en la foto</h2>
+          <h2 className="font-sora text-[15px] font-semibold text-ambar">{t('Hojas revisadas en la foto')}</h2>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <Dato titulo="Hojas revisadas" valor={general.hojas} />
-            <Dato titulo="Con manchas color roya" valor={general.con_manchas} />
-            {general.con_manchas > 0 && <Dato titulo="La más afectada" valor={`${num(general.mayor_afectacion)}%`} detalle="de esa hoja" />}
+            <Dato titulo={t('Hojas revisadas')} valor={general.hojas} />
+            <Dato titulo={t('Con manchas color roya')} valor={general.con_manchas} />
+            {general.con_manchas > 0 && <Dato titulo={t('La más afectada')} valor={`${num(general.mayor_afectacion)}%`} detalle={t('de esa hoja')} />}
           </div>
-          {!medicion.valida && <p className="text-sm leading-relaxed text-medio">Para medir el porcentaje exacto, tome una sola hoja de cerca, por el envés.</p>}
+          {!medicion.valida && <p className="text-sm leading-relaxed text-medio">{t('Para medir el porcentaje exacto, tome una sola hoja de cerca, por el envés.')}</p>}
         </div>
       )}
       {muse.length > 0 && (
@@ -265,36 +266,36 @@ function Resultado({ escaneo, modo }) {
           ))}
         </div>
       )}
-      <Tarjeta titulo="Lo que se ve" className="flex-none">
-        {hallazgos.length > 0 ? <Lista elementos={hallazgos} /> : <p className="text-[15px] leading-relaxed text-claro">{interpretacion.lo_que_se_ve || 'Sin descripción.'}</p>}
+      <Tarjeta titulo={t('Lo que se ve')} className="flex-none">
+        {hallazgos.length > 0 ? <Lista elementos={hallazgos} /> : <p className="text-[15px] leading-relaxed text-claro">{interpretacion.lo_que_se_ve || t('Sin descripción.')}</p>}
       </Tarjeta>
-      <Tarjeta titulo="Qué hacer" className="flex-none">
-        {pasos.length > 0 ? <Lista elementos={pasos} numerada /> : <p className="text-[15px] leading-relaxed text-claro">{interpretacion.recomendacion || 'Sin recomendación.'}</p>}
+      <Tarjeta titulo={t('Qué hacer')} className="flex-none">
+        {pasos.length > 0 ? <Lista elementos={pasos} numerada /> : <p className="text-[15px] leading-relaxed text-claro">{interpretacion.recomendacion || t('Sin recomendación.')}</p>}
         {interpretacion.cuando_consultar && (
-          <p className="mt-1 border-t border-borde pt-2.5 text-sm leading-relaxed text-claro"><b className="text-texto">Cuándo consultar:</b> {interpretacion.cuando_consultar}</p>
+          <p className="mt-1 border-t border-borde pt-2.5 text-sm leading-relaxed text-claro"><b className="text-texto">{t('Cuándo consultar:')}</b> {interpretacion.cuando_consultar}</p>
         )}
       </Tarjeta>
       {interpretacion.otras_causas.length > 0 && (
         <div className="flex-none rounded-2xl border border-dashed border-[#2f5242] px-5 py-3.5 text-sm text-medio">
-          Podría confundirse con: <b className="text-texto">{interpretacion.otras_causas.join(', ')}</b>.
+          {t('Podría confundirse con:')} <b className="text-texto">{interpretacion.otras_causas.join(', ')}</b>.
         </div>
       )}
       {interpretacion.consejo_foto && <p className="flex-none text-sm text-medio">{interpretacion.consejo_foto}</p>}
       <div className="flex-1" />
       <Link to={`/asistente?escaneo=${escaneo.id}&lote=${escaneo.lote}`} className="flex h-11 flex-none items-center justify-center gap-2 rounded-xl border border-borde-fuerte px-4 text-sm font-semibold hover:border-ambar">
         <Icono nombre="chat" tam={18} />
-        Preguntar sobre este resultado
+        {t('Preguntar sobre este resultado')}
       </Link>
       <div className="flex flex-none flex-wrap gap-3">
         <Link to="/finca" className="flex h-[52px] flex-1 items-center justify-center rounded-xl bg-ambar px-4 font-bold whitespace-nowrap text-[#1a1206] hover:bg-[#ffc85e]">
-          Ver en Mi finca · Lote {escaneo.lote}
+          {t('Ver en Mi finca · Lote {lote}', { lote: escaneo.lote })}
         </Link>
         <Link to="/roya" className="flex h-[52px] flex-1 items-center justify-center rounded-xl border border-borde-fuerte px-4 font-semibold whitespace-nowrap hover:border-ambar">
-          Escanear otra hoja
+          {t('Escanear otra hoja')}
         </Link>
       </div>
       <CreditoFoto foto={escaneo.foto_ejemplo} />
-      {modo === 'demo' && <p className="flex-none text-xs leading-relaxed text-suave">Medición local por color para probar la interfaz. No es un diagnóstico.</p>}
+      {modo === 'demo' && <p className="flex-none text-xs leading-relaxed text-suave">{t('Medición local por color para probar la interfaz. No es un diagnóstico.')}</p>}
     </section>
   )
 }
@@ -303,16 +304,16 @@ function Preparacion({ vista, analizando, error, lote, setLote, alElegir, alEjem
   return (
     <div className="grid min-h-0 flex-1 gap-6 p-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:px-9 lg:py-6">
       <section className="relative min-h-[360px] overflow-hidden rounded-3xl border border-borde bg-visor">
-        <img src={vista} alt={analizando ? 'Foto que se está analizando' : 'Hoja de café con roya'} className="absolute inset-0 size-full object-contain" />
+        <img src={vista} alt={analizando ? t('Foto que se está analizando') : t('Hoja de café con roya')} className="absolute inset-0 size-full object-contain" />
         {analizando && <div className="rl-linea" />}
         <span className="absolute top-4 left-4 rounded-lg bg-bosque/85 px-3 py-1.5 font-mono text-xs text-ambar-claro">
-          {analizando ? 'ANALIZANDO…' : 'IMAGEN GENERADA CON IA'}
+          {analizando ? t('ANALIZANDO…') : t('IMAGEN GENERADA CON IA')}
         </span>
       </section>
       <section className="flex flex-col gap-4 lg:overflow-y-auto">
         <div className="flex flex-col gap-2">
-          <h2 className="font-sora text-2xl font-extrabold">Escanee una hoja</h2>
-          <p className="leading-relaxed text-medio">Una sola hoja, de cerca, mostrando el envés y con buena luz. La app mide qué porcentaje está afectado.</p>
+          <h2 className="font-sora text-2xl font-extrabold">{t('Escanee una hoja')}</h2>
+          <p className="leading-relaxed text-medio">{t('Una sola hoja, de cerca, mostrando el envés y con buena luz. La app mide qué porcentaje está afectado.')}</p>
         </div>
         {error && <Error mensaje={error} />}
         <SelectorLote valor={lote} alCambiar={setLote} deshabilitado={analizando} />
@@ -320,7 +321,7 @@ function Preparacion({ vista, analizando, error, lote, setLote, alElegir, alEjem
           <BotonesFoto tipo="roya" alElegir={alElegir} deshabilitado={analizando} />
         </div>
         <GaleriaEjemplos tipo="roya" activo={activo} deshabilitado={analizando} alElegir={alEjemplo} />
-        <p className="text-xs leading-relaxed text-suave">{AVISO_FOTOS[modo] ?? AVISO_FOTOS.desconocido}</p>
+        <p className="text-xs leading-relaxed text-suave">{t(AVISO_FOTOS[modo] ?? AVISO_FOTOS.desconocido)}</p>
       </section>
     </div>
   )
@@ -392,10 +393,10 @@ export default function Roya() {
     }
   }
 
-  const subtitulo = escaneo ? `Lote ${escaneo.lote} · resultado guardado` : 'Mide cuánta hoja está afectada'
+  const subtitulo = escaneo ? t('Lote {lote} · resultado guardado', { lote: escaneo.lote }) : t('Mide cuánta hoja está afectada')
   return (
     <div className="flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
-      <BarraPantalla titulo="Escáner de roya" subtitulo={subtitulo} modo={modo}>
+      <BarraPantalla titulo={t('Escáner de roya')} subtitulo={subtitulo} modo={modo}>
         {(escaneo || analizando) && <Pasos activo={analizando ? paso : null} />}
       </BarraPantalla>
       {id && error ? (
@@ -403,7 +404,7 @@ export default function Roya() {
           <Error mensaje={error} />
         </div>
       ) : id && !escaneo ? (
-        <p role="status" className="p-9 text-medio">Cargando el escaneo…</p>
+        <p role="status" className="p-9 text-medio">{t('Cargando el escaneo…')}</p>
       ) : escaneo ? (
         <div className="grid min-h-0 flex-1 gap-6 p-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:px-9 lg:py-6">
           <div className="flex min-h-0 flex-col">

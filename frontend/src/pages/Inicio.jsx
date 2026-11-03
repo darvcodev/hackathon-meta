@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ConstruidoConMeta, Icono, Logo } from '../components/ui.jsx'
+import { ConstruidoConMeta, Icono, Logo, SelectorIdioma } from '../components/ui.jsx'
+import { t } from '../i18n.js'
 
 const DETECCIONES = [
   { estilo: 'left-[3%] top-[66%] border-[#e88a2a] text-[#ffd3a6]', texto: 'ROYA · HOJA' },
@@ -30,7 +31,7 @@ function Escaner() {
         </g>
       </svg>
       <div className="absolute inset-[11%] overflow-hidden rounded-full border border-[#24493a]">
-        <img src="/img/rama-escaner.jpg" alt="Rama de café con cerezas en distintos grados de maduración y una hoja con roya" className="size-full object-cover" />
+        <img src="/img/rama-escaner.jpg" alt={t('Rama de café con cerezas en distintos grados de maduración y una hoja con roya')} className="size-full object-cover" />
         <div className="rl-linea" />
       </div>
       {DETECCIONES.map((d, i) => (
@@ -41,7 +42,7 @@ function Escaner() {
           transition={{ delay: 0.5 + i * 0.25 }}
           className={`absolute rounded-lg border bg-tarjeta/95 px-2.5 py-1.5 font-mono text-[11px] whitespace-nowrap ${d.estilo}`}
         >
-          {d.texto}
+          {t(d.texto)}
         </motion.div>
       ))}
     </div>
@@ -57,14 +58,14 @@ function Paso({ paso, indice }) {
         className={`flex h-full flex-col gap-1.5 rounded-[18px] border bg-tarjeta/90 px-4 py-3.5 backdrop-blur-sm hover:border-ambar ${deMeta ? 'border-ambar/60' : 'border-[#23463a]'}`}
       >
         <span className="flex items-center justify-between gap-2 font-mono text-[10.5px] tracking-[1px]">
-          <span className={deMeta ? 'text-ambar' : 'text-suave'}>{paso.etiqueta}</span>
+          <span className={deMeta ? 'text-ambar' : 'text-suave'}>{t(paso.etiqueta)}</span>
           <Icono nombre={paso.icono} tam={18} className={deMeta ? 'flex-none text-ambar' : 'flex-none text-medio'} />
         </span>
         <span className="font-sora text-[17px] font-semibold text-white">
           <span className="mr-1.5 text-suave">{indice + 1}.</span>
-          {paso.titulo}
+          {t(paso.titulo)}
         </span>
-        <span className="text-[13px] leading-snug text-medio">{paso.texto}</span>
+        <span className="text-[13px] leading-snug text-medio">{t(paso.texto)}</span>
       </Link>
     </motion.li>
   )
@@ -88,43 +89,46 @@ export default function Inicio() {
             <Logo tam={30} />
             RoyaLens
           </Link>
-          <span className="flex flex-none items-center gap-2 border-l border-white/25 pl-2.5 text-xs font-medium text-claro sm:pl-4" aria-label="Impulsado por IA de Meta">
+          <span className="hidden flex-none items-center gap-2 border-l border-white/25 pl-2.5 text-xs font-medium text-claro sm:flex sm:pl-4" aria-label={t('Impulsado por IA de Meta')}>
             <img src="/img/meta-symbol.svg" alt="" className="h-[14px] w-auto sm:h-[16px]" />
-            <span className="hidden whitespace-nowrap min-[1200px]:inline">Impulsado por IA de Meta</span>
+            <span className="hidden whitespace-nowrap min-[1200px]:inline">{t('Impulsado por IA de Meta')}</span>
           </span>
         </div>
-        <nav aria-label="Principal" className="hidden items-center gap-8 text-[15px] font-medium text-claro md:flex">
-          <Link to="/finca" className="hover:text-white">Mi finca</Link>
-          <Link to="/roya" className="hover:text-white">Roya</Link>
-          <Link to="/maduracion" className="hover:text-white">Maduración</Link>
-          <Link to="/asistente" className="hover:text-white">Asistente</Link>
-          <Link to="/estadisticas" className="hover:text-white">Estadísticas</Link>
+        <nav aria-label={t('Principal')} className="hidden items-center gap-6 text-[15px] font-medium whitespace-nowrap text-claro lg:flex xl:gap-8">
+          <Link to="/finca" className="hover:text-white">{t('Mi finca')}</Link>
+          <Link to="/roya" className="hover:text-white">{t('Roya')}</Link>
+          <Link to="/maduracion" className="hover:text-white">{t('Maduración')}</Link>
+          <Link to="/asistente" className="hover:text-white">{t('Asistente')}</Link>
+          <Link to="/estadisticas" className="hover:text-white">{t('Estadísticas')}</Link>
         </nav>
-        <Link to="/finca" className="inline-flex h-11 items-center rounded-full border border-borde-fuerte bg-bosque/40 px-3 text-sm font-semibold whitespace-nowrap hover:border-ambar sm:px-5">
-          <span className="sm:hidden">Mi finca</span><span className="hidden sm:inline">Ver mi finca</span>
-        </Link>
+        <div className="flex flex-none items-center gap-2">
+          <SelectorIdioma />
+          <Link to="/finca" className="inline-flex h-11 items-center rounded-full border border-borde-fuerte bg-bosque/40 px-3 text-sm font-semibold whitespace-nowrap hover:border-ambar sm:px-5">
+            <span className="sm:hidden">{t('Mi finca')}</span><span className="hidden sm:inline">{t('Ver mi finca')}</span>
+          </Link>
+        </div>
       </header>
 
       <main className="relative z-10 flex min-h-0 flex-1 flex-col gap-5 px-4 pb-4 lg:px-16">
         <div className="grid min-h-0 flex-1 items-center gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
           <motion.section initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="flex flex-col gap-4 pt-4 lg:pt-0">
-            <span className="font-mono text-xs tracking-[1.5px] text-ambar">DEL CAFETAL COLOMBIANO, IMPULSADO POR IA DE META</span>
+            <span className="font-mono text-xs tracking-[1.5px] text-ambar">{t('DEL CAFETAL COLOMBIANO, IMPULSADO POR IA DE META')}</span>
             <h1 className="font-sora text-[44px] leading-[1.04] font-extrabold tracking-tight xl:text-[64px]">
-              Su cafetal,
+              {t('Su cafetal,')}
               <br />
-              <span className="text-ambar">visto por IA.</span>
+              <span className="text-ambar">{t('visto por IA.')}</span>
             </h1>
             <p className="max-w-[560px] text-lg leading-relaxed text-claro">
-              Con una foto del celular, RoyaLens estima cuánta roya tiene cada hoja y cuántas cerezas de cada racimo están en punto. Luego le explica qué significa, en palabras de finca.
+              {t('Con una foto del celular, RoyaLens estima cuánta roya tiene cada hoja y cuántas cerezas de cada racimo están en punto. Luego le explica qué significa, en palabras de finca.')}
             </p>
             <div className="flex flex-wrap gap-3">
               <Link to="/camara" className="inline-flex h-14 items-center gap-2.5 rounded-[14px] bg-ambar px-7 font-bold text-[#1a1206] hover:bg-[#ffc85e]">
                 <Icono nombre="camara" grosor={2.2} />
-                Escanear ahora
+                {t('Escanear ahora')}
               </Link>
               <Link to="/asistente" className="inline-flex h-14 items-center gap-2.5 rounded-[14px] border border-borde-fuerte bg-bosque/40 px-6 font-semibold hover:border-ambar">
                 <Icono nombre="chat" />
-                Hacer una pregunta
+                {t('Hacer una pregunta')}
               </Link>
             </div>
             <ConstruidoConMeta className="text-sm text-medio" />
@@ -135,7 +139,7 @@ export default function Inicio() {
         </div>
 
         <section aria-labelledby="como-funciona" className="flex flex-none flex-col gap-2.5">
-          <h2 id="como-funciona" className="font-sora text-[15px] font-semibold text-claro">Cómo funciona</h2>
+          <h2 id="como-funciona" className="font-sora text-[15px] font-semibold text-claro">{t('Cómo funciona')}</h2>
           <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {PASOS.map((p, i) => (
               <Paso key={p.titulo} paso={p} indice={i} />
