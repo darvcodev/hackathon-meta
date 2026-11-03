@@ -65,6 +65,7 @@ async def analyze(
     image: Image.Image,
     lesion_prompts: list[str] | None = None,
     min_confidence: float = config.MIN_CONFIDENCE,
+    language: str = "es",
 ) -> Diagnosis:
     lesion_prompts = [p.strip() for p in (lesion_prompts or config.DEFAULT_LESION_PROMPTS) if p.strip()]
     client = make_client()
@@ -109,6 +110,7 @@ async def analyze(
         level=severity.level,
         leaves_checked=general["hojas"] if general else 0,
         leaves_with_spots=general["con_manchas"] if general else 0,
+        language=language,
     )
     # Un solo motivo cuando no hay medición; los demás avisos solo aplican si la hubo.
     if muse.get("es_hoja_de_cafe") is False:
@@ -184,7 +186,9 @@ class RipenessResult:
         }
 
 
-async def analyze_ripeness(image: Image.Image, min_confidence: float = config.MIN_CONFIDENCE) -> RipenessResult:
+async def analyze_ripeness(
+    image: Image.Image, min_confidence: float = config.MIN_CONFIDENCE, language: str = "es"
+) -> RipenessResult:
     """Foto -> SAM (cerezas) -> estado por color -> conteo -> Muse explica."""
     client = make_client()
     img, data_url = prepare_image(image)
@@ -194,7 +198,7 @@ async def analyze_ripeness(image: Image.Image, min_confidence: float = config.MI
     cherries = [Cherry(inst, ripeness(rgb, inst.mask)) for inst in cherries_from(found)]
     counts = {state: sum(1 for c in cherries if c.state == state) for state in config.RIPENESS_STATES}
 
-    muse = await interpret_ripeness(client, data_url, counts, len(cherries))
+    muse = await interpret_ripeness(client, data_url, counts, len(cherries), language)
 
     # Muse confirma el tipo de foto: SAM también encuentra cualquier otro fruto redondo.
     warnings: list[str] = []

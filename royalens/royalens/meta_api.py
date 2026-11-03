@@ -200,6 +200,18 @@ sugiere consultar al extensionista del Comité de Cafeteros o a Cenicafé.
 Si la foto no es una hoja de café, dilo y no des diagnóstico."""
 
 
+# Las claves y los valores fijos del JSON se quedan en español: el código los lee así.
+LANGUAGE_RULES = {
+    "es": "",
+    "en": """
+
+IDIOMA DE LA RESPUESTA: escribe en inglés claro y sencillo todos los textos libres del JSON (frases y listas).
+Deja las claves y los valores fijos exactamente como aparecen arriba, en español: true, false, "buena", "regular",
+"mala", "haz", "enves" y "no se distingue". Al lote llámalo "plot", al extensionista "extension agent" y al Comité de Cafeteros,
+"Coffee Growers Committee".""",
+}
+
+
 RIPENESS_PROMPT = """Eres un asistente agronómico para caficultores colombianos.
 Analiza la foto. Una herramienta de segmentación ya CONTÓ estas cerezas:
 - Total: {total}
@@ -243,6 +255,7 @@ async def diagnose(
     level: str,
     leaves_checked: int = 0,
     leaves_with_spots: int = 0,
+    language: str = "es",
 ) -> dict:
     """Muse Spark interpreta la foto usando la medición de SAM como contexto."""
     prompt = DIAGNOSIS_PROMPT.format(
@@ -252,7 +265,7 @@ async def diagnose(
         level=level,
         leaves_checked=leaves_checked,
         leaves_with_spots=leaves_with_spots,
-    )
+    ) + LANGUAGE_RULES.get(language, "")
     response = await client.responses.create(
         model=config.MUSE_MODEL,
         input=_user_message(prompt, data_url),
@@ -260,11 +273,14 @@ async def diagnose(
     return _muse_json(response)
 
 
-async def interpret_ripeness(client: AsyncOpenAI, data_url: str, counts: dict, total: int) -> dict:
+async def interpret_ripeness(
+    client: AsyncOpenAI, data_url: str, counts: dict, total: int, language: str = "es"
+) -> dict:
     """Muse Spark confirma que es un racimo y explica el conteo sin cambiarlo."""
+    prompt = RIPENESS_PROMPT.format(total=total, **counts) + LANGUAGE_RULES.get(language, "")
     response = await client.responses.create(
         model=config.MUSE_MODEL,
-        input=_user_message(RIPENESS_PROMPT.format(total=total, **counts), data_url),
+        input=_user_message(prompt, data_url),
     )
     return _muse_json(response)
 

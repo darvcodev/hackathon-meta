@@ -30,6 +30,7 @@ log = logging.getLogger("royalens")
 MAX_FOTO_BYTES = 15 * 1024 * 1024
 MAX_PREGUNTA = 1000
 COOKIE = "royalens_visitante"
+COOKIE_IDIOMA = "royalens_idioma"
 # Un análisis denso usa unos 350 MB: los demás esperan su turno en vez de agotar la memoria.
 CUPO_ANALISIS = asyncio.Semaphore(3)
 TIEMPO_ANALISIS = 120
@@ -76,6 +77,11 @@ async def _visitante(request: Request, siguiente):
             secure=request.headers.get("x-forwarded-proto") == "https",
         )
     return respuesta
+
+
+def _idioma(request: Request) -> str:
+    """El selector de idioma de la interfaz guarda esta cookie; la app abre en inglés."""
+    return "es" if request.cookies.get(COOKIE_IDIOMA) == "es" else "en"
 
 
 def _ip(request: Request) -> str:
@@ -131,7 +137,7 @@ async def _analizar(funcion, foto: UploadFile, lote: int, request: Request) -> d
     _validar_lote(lote)
     imagen = await _leer_foto(foto)
     _consumir("analisis", request)
-    return await _protegido(funcion(imagen, lote, request.state.visitante))
+    return await _protegido(funcion(imagen, lote, request.state.visitante, _idioma(request)))
 
 
 class Mensaje(BaseModel):
@@ -159,11 +165,12 @@ async def preguntar(p: Pregunta, request: Request) -> StreamingResponse:
         raise HTTPException(503, str(exc))
     _consumir("chat", request)
     visitante = request.state.visitante
+    idioma = _idioma(request)
 
     async def eventos():
         try:
             async for evento in chat.conversar(
-                [m.model_dump() for m in p.mensajes], visitante, p.conversacion_id, p.escaneo_id, p.lote
+                [m.model_dump() for m in p.mensajes], visitante, p.conversacion_id, p.escaneo_id, p.lote, idioma
             ):
                 yield json.dumps(evento, ensure_ascii=False) + "\n"
         except Exception:
@@ -199,7 +206,9 @@ async def analizar_ejemplo(slug: str, request: Request, lote: int = Form(1)) -> 
     if not ejemplos.buscar(slug):
         raise HTTPException(404, "Esa foto de ejemplo no existe.")
     return await _protegido(
-        service.analizar_ejemplo(slug, lote, request.state.visitante, lambda: _consumir("analisis", request))
+        service.analizar_ejemplo(
+            slug, lote, request.state.visitante, lambda: _consumir("analisis", request), _idioma(request)
+        )
     )
 
 

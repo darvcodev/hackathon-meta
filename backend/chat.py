@@ -29,7 +29,7 @@ variedades, suelo, sombrío, clima, precios y mercado del café, manejo del lote
 Si te preguntan por otra cosa, dilo en una frase y ofrece ayuda con el cafetal. No hagas esa tarea.
 
 CÓMO RESPONDER
-- Trata al caficultor de usted, con respeto y sin apodos. Responde en el idioma de la pregunta; por defecto, español de Colombia.
+- Trata al caficultor de usted, con respeto y sin apodos. Responde en el idioma que indica la sección IDIOMA.
 - Sé breve: máximo 5 frases o 4 viñetas cortas, salvo que pidan más detalle. Usa palabras sencillas.
 - Escribe texto plano. No uses negrillas, títulos ni tablas. Para viñetas, empieza la línea con "- ".
 
@@ -86,14 +86,34 @@ _MARCAS = re.compile(
     r"\b(?:alto\s*100|amistar|sphere\s*max|silvacur|folicur|bayfidan|orius|mancozeb|cyproconazol|ciproconazol|triadimenol|epoxiconazol|azoxistrobina|tebuconazol)\b",
     re.IGNORECASE,
 )
-SUSTITUTO_DOSIS = (
-    "No puedo indicar dosis ni productos químicos. El manejo con productos debe definirlo el extensionista "
-    "del Comité de Cafeteros o Cenicafé según su lote, porque depende de la variedad, la edad del cultivo y el nivel de roya."
-)
-SUSTITUTO_VACIO = (
-    "No tengo una respuesta para esa pregunta. Si es sobre dosis o productos químicos, consulte al extensionista "
-    "del Comité de Cafeteros o a Cenicafé. Si es sobre otro tema, intente preguntarlo de otra manera."
-)
+SUSTITUTO_DOSIS = {
+    "es": (
+        "No puedo indicar dosis ni productos químicos. El manejo con productos debe definirlo el extensionista "
+        "del Comité de Cafeteros o Cenicafé según su lote, porque depende de la variedad, la edad del cultivo y el nivel de roya."
+    ),
+    "en": (
+        "I can't give doses or recommend chemical products. Treatment must be decided by your extension agent at the "
+        "Coffee Growers Committee or by Cenicafé for your plot, because it depends on the variety, the age of the crop "
+        "and the rust level."
+    ),
+}
+SUSTITUTO_VACIO = {
+    "es": (
+        "No tengo una respuesta para esa pregunta. Si es sobre dosis o productos químicos, consulte al extensionista "
+        "del Comité de Cafeteros o a Cenicafé. Si es sobre otro tema, intente preguntarlo de otra manera."
+    ),
+    "en": (
+        "I don't have an answer for that question. If it's about doses or chemical products, ask your extension agent "
+        "at the Coffee Growers Committee or Cenicafé. If it's about something else, try asking it another way."
+    ),
+}
+IDIOMAS = {
+    "es": "español de Colombia",
+    "en": (
+        "inglés sencillo; usa \"plot\" para lote, \"extension agent\" para extensionista "
+        "y \"Coffee Growers Committee\" para el Comité de Cafeteros"
+    ),
+}
 
 
 class ChatNoDisponible(RuntimeError):
@@ -101,11 +121,16 @@ class ChatNoDisponible(RuntimeError):
 
 
 async def conversar(
-    mensajes: list[dict], visitante: str, conversacion_id: str | None, escaneo_id: str | None, lote: int | None
+    mensajes: list[dict],
+    visitante: str,
+    conversacion_id: str | None,
+    escaneo_id: str | None,
+    lote: int | None,
+    idioma: str = "es",
 ) -> AsyncIterator[dict]:
     """Responde y guarda el turno solo cuando la respuesta llegó completa."""
     texto, citas, titulo_citas = "", [], None
-    async for evento in responder(mensajes, visitante, escaneo_id, lote):
+    async for evento in responder(mensajes, visitante, escaneo_id, lote, idioma):
         if evento["tipo"] == "texto":
             texto += evento["delta"]
         elif evento["tipo"] == "reinicio":
@@ -250,12 +275,20 @@ def _consultadas(respuesta) -> list[dict]:
 
 
 async def responder(
-    mensajes: list[dict], visitante: str, escaneo_id: str | None = None, lote: int | None = None
+    mensajes: list[dict],
+    visitante: str,
+    escaneo_id: str | None = None,
+    lote: int | None = None,
+    idioma: str = "es",
 ) -> AsyncIterator[dict]:
     """Eventos de la respuesta: texto, estado, reinicio, reemplazo, citas y fin."""
     modo = service.modo()
     client = make_client()
-    instrucciones = f"{INSTRUCCIONES}\n\n{contexto_finca(modo, visitante, escaneo_id, lote)}"
+    idioma = idioma if idioma in IDIOMAS else "es"
+    instrucciones = (
+        f"{INSTRUCCIONES}\n\nIDIOMA\nLa app del caficultor está en {IDIOMAS[idioma]}. Responde en ese idioma, "
+        f"salvo que la pregunta esté claramente escrita en otro.\n\n{contexto_finca(modo, visitante, escaneo_id, lote)}"
+    )
     acumulado = ""
     try:
         async with client.responses.stream(
@@ -287,7 +320,7 @@ async def responder(
                 acumulado += evento.delta
                 if habla_de_dosis(acumulado):
                     log.warning("Respuesta del chat bloqueada por mencionar dosis o marcas")
-                    yield {"tipo": "reemplazo", "texto": SUSTITUTO_DOSIS}
+                    yield {"tipo": "reemplazo", "texto": SUSTITUTO_DOSIS[idioma]}
                     yield {"tipo": "fin"}
                     return
                 yield {"tipo": "texto", "delta": evento.delta}
@@ -297,14 +330,14 @@ async def responder(
         if FILTRO_DE_CONTENIDO not in str(exc):
             raise
         log.warning("El filtro de contenido bloqueó la pregunta")
-        yield {"tipo": "reemplazo", "texto": SUSTITUTO_VACIO}
+        yield {"tipo": "reemplazo", "texto": SUSTITUTO_VACIO[idioma]}
         yield {"tipo": "fin"}
         return
 
     # Muse también puede terminar sin texto, por ejemplo ante algunas preguntas de dosis.
     if not acumulado.strip():
         log.warning("Muse terminó sin texto")
-        yield {"tipo": "reemplazo", "texto": SUSTITUTO_VACIO}
+        yield {"tipo": "reemplazo", "texto": SUSTITUTO_VACIO[idioma]}
         yield {"tipo": "fin"}
         return
     citas = _citas(final)

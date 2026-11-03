@@ -107,13 +107,43 @@ def _diagnostico(medible, porcentaje=0.0, lesiones=0, avisos=()):
     return Diagnosis(overlay, severidad, "leaf", [], muse, list(avisos), measurable=medible, dae=8 if medible else None)
 
 
+@pytest.mark.parametrize("cookie,esperado", [(None, "en"), ("en", "en"), ("es", "es"), ("fr", "en")])
+def test_el_idioma_de_la_interfaz_llega_a_muse(client, monkeypatch, cookie, esperado):
+    from backend import service
+
+    monkeypatch.setenv("ROYALENS_MODE", "real")
+    pedidos = []
+
+    async def analizar(_, language="es"):
+        pedidos.append(language)
+        return _diagnostico(True, porcentaje=2.0, lesiones=1)
+
+    monkeypatch.setattr(service, "analyze", analizar)
+    cabeceras = {"cookie": f"royalens_idioma={cookie}"} if cookie else {}
+    r = client.post("/api/roya", files={"foto": _foto(_hoja)}, data={"lote": 4}, headers=cabeceras)
+    assert r.status_code == 200
+    assert pedidos == [esperado] and r.json()["idioma"] == esperado
+
+
+def test_foto_de_ejemplo_se_analiza_una_vez_por_idioma(client, monkeypatch):
+    from backend import service
+
+    llamadas = []
+    original = service.demo.analizar_roya
+    monkeypatch.setattr(service.demo, "analizar_roya", lambda img: llamadas.append(1) or original(img))
+    for idioma in ("es", "es", "en", "en"):
+        r = client.post("/api/ejemplos/hoja-otra-mancha", data={"lote": 1}, headers={"cookie": f"royalens_idioma={idioma}"})
+        assert r.status_code == 200 and r.json()["idioma"] == idioma
+    assert len(llamadas) == 2
+
+
 def test_real_foto_sin_medicion_no_cuenta_en_el_lote(client, monkeypatch):
     from backend import service
 
     monkeypatch.setenv("ROYALENS_MODE", "real")
     antes = client.get("/api/resumen").json()["lotes"][1]["muestra"]["hojas"]
 
-    async def sin_hoja(_):
+    async def sin_hoja(_, **__):
         return _diagnostico(False, avisos=["No se pudo medir."])
 
     monkeypatch.setattr(service, "analyze", sin_hoja)
@@ -127,7 +157,7 @@ def test_real_foto_sin_medicion_no_cuenta_en_el_lote(client, monkeypatch):
     assert lote["muestra"]["hojas"] == antes
     assert lote["roya"] is None
 
-    async def con_roya(_):
+    async def con_roya(_, **__):
         return _diagnostico(True, porcentaje=8.0, lesiones=3)
 
     monkeypatch.setattr(service, "analyze", con_roya)
@@ -144,7 +174,7 @@ def test_real_error_de_api_no_guarda_resultado(client, monkeypatch):
 
     monkeypatch.setenv("ROYALENS_MODE", "real")
 
-    async def falla(_):
+    async def falla(_, **__):
         raise RuntimeError("401 clave inválida")
 
     monkeypatch.setattr(service, "analyze", falla)
@@ -160,7 +190,7 @@ def test_roya_alta_alerta_sin_historial(client, monkeypatch):
 
     monkeypatch.setenv("ROYALENS_MODE", "real")
 
-    async def severa(_):
+    async def severa(_, **__):
         return _diagnostico(True, porcentaje=25.0, lesiones=9)
 
     monkeypatch.setattr(service, "analyze", severa)
@@ -181,7 +211,7 @@ def test_maduracion_real_cuenta_y_guarda(client, monkeypatch):
     mascara[10:40, 10:40] = True
     inst = Instance("0", mascara, (10, 10, 40, 40), 0.8)
 
-    async def contar(_):
+    async def contar(_, **__):
         cerezas = [Cherry(inst, "maduro")] * 6 + [Cherry(inst, "verde")] * 2
         conteo = {"verde": 2, "pinton": 0, "maduro": 6, "sobremaduro": 0}
         return RipenessResult(cerezas, conteo, {"lo_que_se_ve": "racimo", "recomendacion": "recoger"}, [], True)
@@ -208,7 +238,7 @@ def test_maduracion_real_sin_racimo_no_cuenta(client, monkeypatch):
 
     monkeypatch.setenv("ROYALENS_MODE", "real")
 
-    async def sin_racimo(_):
+    async def sin_racimo(_, **__):
         conteo = {"verde": 0, "pinton": 0, "maduro": 0, "sobremaduro": 0}
         return RipenessResult([], conteo, {"es_racimo_de_cafe": False}, ["No es un racimo."], False)
 
@@ -253,9 +283,9 @@ def test_chat_transmite_eventos(client, monkeypatch):
 
     _chat_real(monkeypatch)
 
-    async def falso(mensajes, visitante, escaneo_id, lote):
+    async def falso(mensajes, visitante, escaneo_id, lote, idioma):
         assert mensajes == [{"rol": "usuario", "texto": "hola"}]
-        assert lote == 2
+        assert lote == 2 and idioma == "en"
         yield {"tipo": "texto", "delta": "Buenos "}
         yield {"tipo": "texto", "delta": "días"}
         yield {"tipo": "fin"}
@@ -307,7 +337,7 @@ def test_chat_respuesta_vacia_de_muse_no_es_error(client, monkeypatch):
     r = client.post("/api/chat", json={"mensajes": [{"rol": "usuario", "texto": "¿Cuánto producto le echo?"}]})
     eventos = _eventos(r)
     assert [e["tipo"] for e in eventos] == ["reemplazo", "conversacion", "fin"]
-    assert eventos[0]["texto"] == chat.SUSTITUTO_VACIO
+    assert eventos[0]["texto"] == chat.SUSTITUTO_VACIO["en"]
 
 
 @pytest.mark.parametrize(
@@ -384,7 +414,7 @@ def test_contexto_usa_cifras_del_historial(client, monkeypatch):
 
     monkeypatch.setenv("ROYALENS_MODE", "real")
 
-    async def con_roya(_):
+    async def con_roya(_, **__):
         return _diagnostico(True, porcentaje=8.0, lesiones=3)
 
     monkeypatch.setattr(service, "analyze", con_roya)
@@ -568,7 +598,7 @@ def test_analisis_trabado_es_error_y_no_guarda(client, monkeypatch):
     monkeypatch.setenv("ROYALENS_MODE", "real")
     monkeypatch.setattr(main, "TIEMPO_ANALISIS", 0.05)
 
-    async def trabado(_):
+    async def trabado(_, **__):
         await asyncio.sleep(5)
 
     monkeypatch.setattr(service, "analyze", trabado)
@@ -591,7 +621,7 @@ def _preguntar(cliente, monkeypatch, texto, conversacion=None):
 
     _chat_real(monkeypatch)
 
-    async def falso(mensajes, visitante, escaneo_id, lote):
+    async def falso(mensajes, visitante, escaneo_id, lote, idioma):
         yield {"tipo": "texto", "delta": f"Respuesta a {mensajes[-1]['texto']}"}
         yield {"tipo": "citas", "citas": [{"titulo": "Fuente", "url": "https://ejemplo.co"}], "titulo": "Fuentes de la web"}
         yield {"tipo": "fin"}
@@ -657,7 +687,7 @@ def test_estadisticas_calcula_desde_escaneos_y_preguntas(client, monkeypatch):
 
     resultados = iter([_diagnostico(True, porcentaje=8.0, lesiones=3), _diagnostico(True, porcentaje=0.0), _diagnostico(False)])
 
-    async def analizar(_):
+    async def analizar(_, **__):
         return next(resultados)
 
     monkeypatch.setattr(service, "analyze", analizar)
@@ -680,7 +710,7 @@ def test_resultado_compara_con_el_escaneo_anterior_del_lote(client, monkeypatch)
 
     resultados = iter([_diagnostico(True, porcentaje=8.0, lesiones=3), _diagnostico(True, porcentaje=11.0, lesiones=5)])
 
-    async def analizar(_):
+    async def analizar(_, **__):
         return next(resultados)
 
     monkeypatch.setenv("ROYALENS_MODE", "real")

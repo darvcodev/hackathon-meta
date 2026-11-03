@@ -34,7 +34,7 @@ class EjemploNoExiste(LookupError):
     pass
 
 
-def _base(tipo: str, lote: int, img: Image.Image) -> dict:
+def _base(tipo: str, lote: int, img: Image.Image, idioma: str) -> dict:
     escaneo_id = store.nuevo_id()
     nombre = f"{escaneo_id}.jpg"
     img.save(store.MEDIA_DIR / nombre, quality=88)
@@ -45,6 +45,7 @@ def _base(tipo: str, lote: int, img: Image.Image) -> dict:
         "creado": datetime.now(timezone.utc).isoformat(),
         "modo": modo(),
         "ejemplo": False,
+        "idioma": idioma,
         "ancho": img.width,
         "alto": img.height,
         "imagen_url": f"/media/{nombre}",
@@ -86,7 +87,7 @@ def _interpretacion_muse(muse: dict) -> dict:
     }
 
 
-async def analizar_roya(image: Image.Image, lote: int, visitante: str) -> dict:
+async def analizar_roya(image: Image.Image, lote: int, visitante: str, idioma: str = "es") -> dict:
     img, _ = prepare_image(image)
     if modo() == "demo":
         r = demo.analizar_roya(img)
@@ -96,13 +97,13 @@ async def analizar_roya(image: Image.Image, lote: int, visitante: str) -> dict:
         clase = dae_class(severidad.percent) if valida else None
         detalle, general = (lesion_details(r["hoja"], lesiones) if valida else {}), None
     else:
-        d = await analyze(img)
+        d = await analyze(img, language=idioma)
         overlay, severidad, lesiones = d.overlay, d.severity, d.lesions
         interpretacion, avisos = _interpretacion_muse(d.muse), d.warnings
         valida, hojas_en_foto, clase = d.measurable, d.leaves_in_photo, d.dae
         detalle, general = d.details, d.general
 
-    escaneo = _base("roya", lote, img)
+    escaneo = _base("roya", lote, img, idioma)
     nombre_overlay = f"{escaneo['id']}_overlay.jpg"
     overlay.save(store.MEDIA_DIR / nombre_overlay, quality=88)
     escaneo.update(
@@ -155,14 +156,14 @@ def recomendar_cosecha(pct_maduro: int, pct_sobre: int, total: int) -> dict:
     }
 
 
-async def analizar_maduracion(image: Image.Image, lote: int, visitante: str) -> dict:
+async def analizar_maduracion(image: Image.Image, lote: int, visitante: str, idioma: str = "es") -> dict:
     img, _ = prepare_image(image)
     if modo() == "demo":
         r = demo.analizar_maduracion(img)
         cerezas, avisos, interpretacion = r["cerezas"], r["avisos"], None
         valida = bool(cerezas)
     else:
-        d = await analyze_ripeness(img)
+        d = await analyze_ripeness(img, language=idioma)
         cerezas = [
             {"estado": c.state, "caja": c.instance.box, "confianza": c.instance.confidence} for c in d.cherries
         ]
@@ -171,7 +172,7 @@ async def analizar_maduracion(image: Image.Image, lote: int, visitante: str) -> 
     conteo = {e: sum(1 for c in cerezas if c["estado"] == e) for e in config.RIPENESS_STATES}
     pct = lambda n: round(100 * n / total) if total else 0
 
-    escaneo = _base("maduracion", lote, img)
+    escaneo = _base("maduracion", lote, img, idioma)
     escaneo.update(
         medicion={
             "valida": valida,
@@ -192,22 +193,23 @@ async def analizar_maduracion(image: Image.Image, lote: int, visitante: str) -> 
     return store.guardar(escaneo, visitante)
 
 
-async def analizar_ejemplo(slug: str, lote: int, visitante: str, al_analizar) -> dict:
-    """Las fotos de ejemplo se analizan una vez: las demás veces no gastan créditos ni tiempo."""
+async def analizar_ejemplo(slug: str, lote: int, visitante: str, al_analizar, idioma: str = "es") -> dict:
+    """Las fotos de ejemplo se analizan una vez por idioma: las demás veces no gastan créditos ni tiempo."""
     ejemplo = ejemplos.buscar(slug)
     if not ejemplo:
         raise EjemploNoExiste(slug)
-    guardado = store.ejemplo_guardado(slug, modo(), ejemplos.VERSION_ANALISIS)
+    version = f"{ejemplos.VERSION_ANALISIS}-{idioma}"
+    guardado = store.ejemplo_guardado(slug, modo(), version)
     if not guardado:
         al_analizar()
         analizar = analizar_roya if ejemplo["tipo"] == "roya" else analizar_maduracion
         with Image.open(ejemplos.ruta(slug)) as foto:
-            guardado = await analizar(foto, lote, store.CACHE_EJEMPLOS)
+            guardado = await analizar(foto, lote, store.CACHE_EJEMPLOS, idioma)
         guardado = {
             **guardado,
             "foto_ejemplo": {"titulo": ejemplo["titulo"], "credito": ejemplo["credito"], "url": ejemplo["url"]},
         }
-        store.guardar_ejemplo(slug, ejemplos.VERSION_ANALISIS, guardado)
+        store.guardar_ejemplo(slug, version, guardado)
     campo = "porcentaje" if guardado["tipo"] == "roya" else "porcentaje_maduro"
     comparacion = _comparacion(guardado["tipo"], lote, visitante, guardado["medicion"].get(campo))
     return store.copiar_escaneo({**guardado, "comparacion": comparacion}, lote, visitante)
