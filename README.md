@@ -11,6 +11,7 @@ RoyaLens helps coffee growers check leaves and cherry clusters from a phone. Bui
 - **Coffee leaf rust:** SAM 3.1 segments the leaf and its lesions. RoyaLens computes the affected area from those masks, and Muse Spark checks the context and explains the result.
 - **Ripeness:** SAM 3.1 finds the visible cherries. RoyaLens counts them and classifies each one by the color inside its mask, and Muse Spark confirms the scene and explains the count.
 - **Farm history and assistant:** valid scans are stored per plot, with statistics and a streaming assistant that uses the visitor's scans as context and can search the web.
+- **English and Spanish:** the app opens in English. The flag selector at the top switches the whole interface, Muse's explanations and the assistant's answers to Spanish, and back.
 
 Results are estimates from a single photo. They have not been validated against agronomist measurements or field trials.
 
@@ -32,7 +33,7 @@ La aplicación está impulsada por **SAM 3.1 y Muse Spark de Meta**. SAM entrega
 
 *Panel con datos ilustrativos. En una sesión nueva se identifica como «Finca de ejemplo» y se reemplaza por los escaneos del visitante.*
 
-La interfaz incluye cámara, escáner de roya, maduración, panel por lotes, estadísticas y asistente con historial. Hay ocho imágenes de ejemplo para probar los flujos sin una finca cerca: dos fotos libres de derechos con crédito visible y seis imágenes generadas con IA, rotuladas como tales. Sus resultados se marcan como ejemplo en el panel.
+La interfaz incluye cámara, escáner de roya, maduración, panel por lotes, estadísticas y asistente con historial. Está en inglés y en español: abre en inglés y el selector con banderas, arriba en cada pantalla, cambia el idioma. Hay ocho imágenes de ejemplo para probar los flujos sin una finca cerca: dos fotos libres de derechos con crédito visible y seis imágenes generadas con IA, rotuladas como tales. Sus resultados se marcan como ejemplo en el panel.
 
 ## Cómo funciona el análisis
 
@@ -60,6 +61,10 @@ flowchart LR
 2. RoyaLens examina el color dentro de cada máscara para clasificar las cerezas visibles como **verdes, pintonas, maduras o sobremaduras**. El porcentaje sale del conteo, no de Muse Spark.
 3. Muse Spark confirma si la escena parece un racimo de café y explica el resultado. Si hay muy pocas cerezas o están demasiado lejos, se pide repetir la foto y ese porcentaje no entra al panel.
 
+### Idiomas
+
+Los textos fuente de la interfaz están en español y `frontend/src/en.json` guarda su traducción al inglés. El selector guarda el idioma en el navegador y en una cookie; con ella, el servidor pide a Muse Spark que escriba la interpretación y las respuestas del asistente en ese idioma. Las cifras no cambian: salen de las máscaras. Las fotos de ejemplo guardan un resultado por idioma. `make test` comprueba que cada texto de la interfaz y cada mensaje fijo del servidor tenga su traducción.
+
 ### Asistente y panel
 
 El asistente recibe el historial del visitante como contexto y transmite la respuesta por partes. Puede consultar la web y presenta las fuentes cuando están disponibles. Las conversaciones se guardan por visitante hasta 30 días, se pueden retomar o borrar desde el historial y también se eliminan con «Borrar mis datos». El panel agrega escaneos válidos por lote para mostrar historial, incidencia sobre las hojas fotografiadas, evolución y alertas.
@@ -73,6 +78,7 @@ Los límites del método están resumidos en [HACKATHON.md](HACKATHON.md). En pa
 | `frontend/src/pages/` | Las seis pantallas de React |
 | `frontend/src/components/ui.jsx` | Componentes, navegación y avisos compartidos |
 | `frontend/src/api.js` | Solicitudes a la API y lectura del stream del asistente |
+| `frontend/src/i18n.js`, `frontend/src/en.json` | Idioma activo, selector y traducciones al inglés |
 | `backend/main.py` | Rutas FastAPI, validación de archivos, cookie de visitante y entrega del frontend |
 | `backend/service.py` | Orquestación de los análisis real y demo |
 | `backend/store.py` | SQLite, historial, fotos, límites de uso y retención |
@@ -122,7 +128,7 @@ Las imágenes originales y anotadas se entregan por `/media/{nombre}` tras compr
 
 ## Datos y despliegue
 
-El `Dockerfile` compila React y arranca FastAPI en el puerto **8000** y en **modo real**. Para desplegar, configure `MODEL_API_KEY` como secreto, HTTPS para la cámara y un volumen persistente en `/data`. El health check consulta `/api/estado`. La [guía del hackathon](HACKATHON.md) contiene la revisión posterior al despliegue.
+El `Dockerfile` compila React y arranca FastAPI en el puerto **8000** y en **modo real**. Para desplegar, configure `MODEL_API_KEY` como secreto, HTTPS para la cámara y un volumen persistente en `/data`. El health check consulta `/api/estado`. La [guía del hackathon](HACKATHON.md) contiene las variables de entorno y la revisión posterior al despliegue.
 
 Cada navegador recibe una cookie anónima. Los escaneos se separan por visitante y por modo; las fotos se eliminan junto con el escaneo al usar «Borrar mis datos» o al vencer la retención de 30 días. Los límites diarios de análisis y chat se configuran con las variables `ROYALENS_LIMITE_*`. Las ocho imágenes de ejemplo comparten un resultado de análisis almacenado para evitar llamadas repetidas a la API.
 

@@ -51,14 +51,27 @@ Las ocho imágenes actuales son de dominio público, CC0 o generadas con IA. Las
 
 1. Crear una aplicación desde este repositorio y seleccionar el `Dockerfile` de la raíz. El contenedor sirve frontend y API en el puerto **8000**.
 2. Configurar un dominio con HTTPS. La cámara en vivo del celular requiere un contexto seguro.
-3. Definir `MODEL_API_KEY` como secreto de ejecución y montar almacenamiento persistente en `/data`. La imagen inicia en modo real.
+3. Definir las variables de entorno de la tabla siguiente y montar almacenamiento persistente en `/data`. La imagen inicia en modo real.
 4. Asignar al menos **1 GB de memoria** como punto de partida. El servidor limita los análisis simultáneos; observar el consumo real después de publicar.
-5. Comprobar el health check de `/api/estado`, las cookies y los límites por IP detrás del proxy. Los cupos se ajustan con `ROYALENS_LIMITE_ANALISIS_IP`, `ROYALENS_LIMITE_ANALISIS`, `ROYALENS_LIMITE_CHAT_IP` y `ROYALENS_LIMITE_CHAT`.
+5. Comprobar el health check de `/api/estado`, las cookies y los límites por IP detrás del proxy.
+
+| Variable | ¿Obligatoria? | Valor | Uso |
+|---|---|---|---|
+| `MODEL_API_KEY` | Sí, como secreto | La clave de dev.meta.ai | Llamadas a SAM 3.1 y Muse Spark |
+| `ROYALENS_MODE` | No | `real` | Ya viene en la imagen; `demo` no usa la API |
+| `ROYALENS_DATA` | No | `/data` | Ya viene en la imagen; debe coincidir con el volumen |
+| `ROYALENS_LIMITE_ANALISIS_IP` | No | `40` | Análisis por IP al día |
+| `ROYALENS_LIMITE_ANALISIS` | No | `800` | Análisis en total al día |
+| `ROYALENS_LIMITE_CHAT_IP` | No | `60` | Preguntas por IP al día |
+| `ROYALENS_LIMITE_CHAT` | No | `1500` | Preguntas en total al día |
+
+Los valores de la tercera columna son los que usa la app si la variable no existe. `ROYALENS_MUSE_MODEL`, `ROYALENS_SAM_MODEL`, `ROYALENS_MIN_CONFIDENCE` y `META_BASE_URL` existen para pruebas y no hace falta definirlas.
 
 ## Revisión antes de enviar
 
 - [ ] Abrir la app y la cámara en un celular por HTTPS; analizar una foto real de hoja y otra de racimo.
-- [ ] Abrir los ocho ejemplos. Confirmar que cada uno devuelve resultado y que el crédito o el rótulo de imagen generada aparece en la interfaz.
+- [ ] Abrir los ocho ejemplos en inglés y en español. Cada idioma guarda su propio resultado, así que la primera vista de cada uno tarda unos 30 segundos.
+- [ ] Cambiar de idioma con las banderas y confirmar que la interfaz, la explicación de Muse y el asistente responden en ese idioma.
 - [ ] Comprobar en una ventana privada que el historial y las fotos de otro visitante no son accesibles.
 - [ ] Verificar que el asistente responde en streaming y que los enlaces de fuentes funcionan.
 - [ ] Redesplegar una vez y confirmar que el volumen de `/data` conserva el historial.

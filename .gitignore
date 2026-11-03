@@ -30,3 +30,6 @@ fotos/
 
 # Archivos temporales de auditorías locales
 .audit_tmp/
+
+# Configuración local del panel de vista previa
+.claude/launch.json
