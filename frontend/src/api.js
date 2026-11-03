@@ -1,13 +1,15 @@
+import { t } from './i18n.js'
+
 async function pedir(url, opciones) {
   let respuesta
   try {
     respuesta = await fetch(url, opciones)
   } catch {
-    throw new Error('No hay conexión con el servidor.')
+    throw new Error(t('No hay conexión con el servidor.'))
   }
   const datos = await respuesta.json().catch(() => null)
   if (!respuesta.ok) {
-    throw new Error(datos?.detail || `El servidor respondió con error ${respuesta.status}.`)
+    throw new Error(typeof datos?.detail === 'string' ? t(datos.detail) : t('El servidor respondió con error {n}.', { n: respuesta.status }))
   }
   return datos
 }
@@ -48,12 +50,12 @@ export async function preguntar({ mensajes, conversacionId, escaneoId, lote }, a
     })
   } catch (e) {
     if (e.name === 'AbortError') throw e
-    throw new Error('No hay conexión con el servidor.')
+    throw new Error(t('No hay conexión con el servidor.'))
   }
   if (!respuesta.ok) {
     const datos = await respuesta.json().catch(() => null)
     const detalle = typeof datos?.detail === 'string' ? datos.detail : null
-    throw new Error(detalle || `El servidor respondió con error ${respuesta.status}.`)
+    throw new Error(detalle ? t(detalle) : t('El servidor respondió con error {n}.', { n: respuesta.status }))
   }
   const lector = respuesta.body.pipeThrough(new TextDecoderStream()).getReader()
   let resto = ''

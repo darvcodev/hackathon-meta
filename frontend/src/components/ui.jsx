@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { obtenerEjemplos, obtenerEstado } from '../api.js'
+import { cambiarIdioma, idioma, locale, t, useIdioma } from '../i18n.js'
 
 export const LOTES = [1, 2, 3, 4]
 
@@ -88,11 +89,11 @@ export function InsigniaDemo({ modo }) {
   if (modo !== 'demo') return null
   return (
     <span
-      title="Segmentación local por color y textos de ejemplo. No usa SAM ni Muse."
+      title={t('Segmentación local por color y textos de ejemplo. No usa SAM ni Muse.')}
       className="inline-flex items-center gap-2 rounded-lg border border-ambar/60 bg-ambar/10 px-2.5 py-1.5 font-mono text-[11px] font-semibold tracking-wide whitespace-nowrap text-ambar-claro"
     >
       <span className="size-1.5 rounded-full bg-ambar" />
-      MODO DEMO · SIN SAM NI MUSE
+      {t('MODO DEMO · SIN SAM NI MUSE')}
     </span>
   )
 }
@@ -111,11 +112,11 @@ export function Error({ mensaje, alReintentar }) {
     <div role="alert" className="flex items-start gap-3 rounded-2xl border border-cereza/60 bg-[#2a0f0d] px-5 py-4">
       <Icono nombre="alerta" className="mt-0.5 flex-none text-[#ff8a7a]" />
       <div className="flex flex-col items-start gap-2">
-        <span className="font-sora text-[15px] font-semibold text-[#ffd3cc]">No se pudo completar</span>
+        <span className="font-sora text-[15px] font-semibold text-[#ffd3cc]">{t('No se pudo completar')}</span>
         <span className="text-sm leading-relaxed text-[#f2d6d1]">{mensaje}</span>
         {alReintentar && (
           <button onClick={alReintentar} className="min-h-11 text-sm font-semibold text-ambar underline underline-offset-4">
-            Intentar de nuevo
+            {t('Intentar de nuevo')}
           </button>
         )}
       </div>
@@ -129,7 +130,7 @@ export function BarraPantalla({ titulo, subtitulo, children, modo }) {
       <div className="flex min-w-0 items-center gap-4">
         <Link
           to="/finca"
-          aria-label="Volver a Mi finca"
+          aria-label={t('Volver a Mi finca')}
           className="flex size-11 flex-none items-center justify-center rounded-xl border border-[#23463a] text-texto hover:border-ambar"
         >
           <Icono nombre="atras" />
@@ -142,6 +143,7 @@ export function BarraPantalla({ titulo, subtitulo, children, modo }) {
       <div className="flex flex-wrap items-center gap-2.5">
         <InsigniaDemo modo={modo} />
         {children}
+        <SelectorIdioma />
       </div>
     </header>
   )
@@ -150,7 +152,7 @@ export function BarraPantalla({ titulo, subtitulo, children, modo }) {
 export function SelectorLote({ valor, alCambiar, deshabilitado }) {
   return (
     <label className="flex items-center gap-2 text-sm text-medio">
-      Lote
+      {t('Lote')}
       <select
         value={valor}
         disabled={deshabilitado}
@@ -159,7 +161,7 @@ export function SelectorLote({ valor, alCambiar, deshabilitado }) {
       >
         {LOTES.map((l) => (
           <option key={l} value={l}>
-            Lote {l}
+            {t('Lote {n}', { n: l })}
           </option>
         ))}
       </select>
@@ -207,7 +209,7 @@ export const AVISO_FOTOS = {
 
 export function CreditoFoto({ foto }) {
   if (!foto) return null
-  const texto = `Foto de ejemplo: ${foto.credito}`
+  const texto = t('Foto de ejemplo: {credito}', { credito: t(foto.credito) })
   return foto.url ? (
     <a href={foto.url} target="_blank" rel="noreferrer" className="text-xs text-suave underline hover:text-texto">{texto}</a>
   ) : (
@@ -224,7 +226,7 @@ export function GaleriaEjemplos({ tipo, activo, deshabilitado, alElegir }) {
   if (ejemplos.length === 0) return null
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="text-sm font-semibold text-claro">Pruebe con una foto de ejemplo</h3>
+      <h3 className="text-sm font-semibold text-claro">{t('Pruebe con una foto de ejemplo')}</h3>
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {ejemplos.map((e) => (
           <li key={e.slug}>
@@ -232,13 +234,13 @@ export function GaleriaEjemplos({ tipo, activo, deshabilitado, alElegir }) {
               type="button"
               disabled={deshabilitado}
               onClick={() => alElegir(e)}
-              title={e.credito}
+              title={t(e.credito)}
               className={`flex w-full flex-col overflow-hidden rounded-xl border bg-tarjeta text-left hover:border-ambar disabled:opacity-60 ${activo === e.slug ? 'border-ambar' : 'border-borde-fuerte'}`}
             >
               <img src={e.imagen_url} alt="" loading="lazy" className="aspect-[4/3] w-full object-cover" />
               <span className="flex flex-col px-2.5 py-2">
-                <span className="text-[13px] font-semibold text-texto">{e.titulo}</span>
-                <span className="font-mono text-[10px] text-suave">{e.generada ? 'GENERADA CON IA' : 'FOTO REAL'}</span>
+                <span className="text-[13px] font-semibold text-texto">{t(e.titulo)}</span>
+                <span className="font-mono text-[10px] text-suave">{e.generada ? t('GENERADA CON IA') : t('FOTO REAL')}</span>
               </span>
             </button>
           </li>
@@ -266,17 +268,17 @@ export function BotonesFoto({ alElegir, deshabilitado, tipo }) {
       <button
         disabled={deshabilitado}
         onClick={() => entrada.current.click()}
-        className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-xl border border-borde-fuerte px-4 font-semibold text-texto hover:border-ambar disabled:opacity-60"
+        className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-xl border border-borde-fuerte px-4 font-semibold whitespace-nowrap text-texto hover:border-ambar disabled:opacity-60"
       >
         <Icono nombre="galeria" />
-        Subir foto
+        {t('Subir foto')}
       </button>
       <Link
         to={`/camara?tipo=${tipo}`}
         className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-xl border border-borde-fuerte px-4 font-semibold whitespace-nowrap text-texto hover:border-ambar"
       >
         <Icono nombre="camara" />
-        Usar cámara
+        {t('Usar cámara')}
       </Link>
     </>
   )
@@ -287,7 +289,7 @@ export function ConstruidoConMeta({ className = '' }) {
   return (
     <span className={`inline-flex flex-wrap items-center gap-x-1.5 ${className}`}>
       <img src="/img/meta-symbol.svg" alt="" className="mr-1 h-[16px] w-auto flex-none" />
-      Impulsado por IA de Meta: <b className="font-semibold text-texto">SAM 3.1</b> y <b className="font-semibold text-texto">Muse Spark</b>
+      {t('Impulsado por IA de Meta:')} <b className="font-semibold text-texto">SAM 3.1</b> {t('y')} <b className="font-semibold text-texto">Muse Spark</b>
     </span>
   )
 }
@@ -304,31 +306,32 @@ export function NavLateral() {
         RoyaLens
         <img src="/img/meta-symbol.svg" alt="" className="ml-auto h-[14px] w-auto" />
       </Link>
+      <SelectorIdioma className="mb-4 self-start" />
       <NavLink to="/finca" className={clase}>
         <Icono nombre="casa" />
-        Mi finca
+        {t('Mi finca')}
       </NavLink>
       <NavLink to="/roya" className={clase}>
         <Icono nombre="hoja" />
-        Escáner de roya
+        {t('Escáner de roya')}
       </NavLink>
       <NavLink to="/maduracion" className={clase}>
         <Icono nombre="cerezas" />
-        Maduración
+        {t('Maduración')}
       </NavLink>
       <NavLink to="/asistente" className={clase}>
         <Icono nombre="chat" />
-        Asistente
+        {t('Asistente')}
       </NavLink>
       <NavLink to="/estadisticas" className={clase}>
         <Icono nombre="estadisticas" />
-        Estadísticas
+        {t('Estadísticas')}
       </NavLink>
       <div className="flex-1" />
       <ConstruidoConMeta className="px-2.5 pb-3 text-xs leading-relaxed text-suave" />
       <Link to="/camara" className="flex flex-col gap-1 rounded-xl border border-[#23463a] bg-[#12291d] p-4 hover:border-ambar">
-        <span className="font-semibold text-white">Escanee desde el cafetal</span>
-        <span className="text-[13px] text-suave">Abra RoyaLens en su celular</span>
+        <span className="font-semibold text-white">{t('Escanee desde el cafetal')}</span>
+        <span className="text-[13px] text-suave">{t('Abra RoyaLens en su celular')}</span>
       </Link>
     </aside>
   )
@@ -340,40 +343,90 @@ export function NavInferior() {
       isActive ? 'text-ambar' : 'text-medio'
     }`
   return (
-    <nav aria-label="Principal" className="sticky bottom-0 z-20 flex border-t border-[#1b3428] bg-lateral pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav aria-label={t('Principal')} className="sticky bottom-0 z-20 flex border-t border-[#1b3428] bg-lateral pb-[env(safe-area-inset-bottom)] lg:hidden">
       <NavLink to="/finca" className={clase}>
         <Icono nombre="casa" />
-        Mi finca
+        {t('Mi finca')}
       </NavLink>
       <NavLink to="/roya" className={clase}>
         <Icono nombre="hoja" />
-        Roya
+        {t('Roya')}
       </NavLink>
       <NavLink to="/camara" className={clase}>
         <Icono nombre="camara" />
-        Cámara
+        {t('Cámara')}
       </NavLink>
       <NavLink to="/maduracion" className={clase}>
         <Icono nombre="cerezas" />
-        Maduración
+        {t('Maduración')}
       </NavLink>
       <NavLink to="/asistente" className={clase}>
         <Icono nombre="chat" />
-        Asistente
+        {t('Asistente')}
       </NavLink>
-      <NavLink to="/estadisticas" aria-label="Estadísticas" className={clase}>
+      <NavLink to="/estadisticas" aria-label={t('Estadísticas')} className={clase}>
         <Icono nombre="estadisticas" />
-        Datos
+        {t('Datos')}
       </NavLink>
     </nav>
   )
 }
 
-/** Número con coma decimal, como se escribe en Colombia. */
+/** Número con coma decimal en español, como se escribe en Colombia, y con punto en inglés. */
 export function num(v) {
-  return String(v).replace('.', ',')
+  return idioma() === 'es' ? String(v).replace('.', ',') : String(v)
 }
 
 export function fechaCorta(iso) {
-  return new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' }).format(new Date(iso))
+  return new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'short' }).format(new Date(iso))
+}
+
+function Bandera({ id }) {
+  if (id === 'es') {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 6 4" className="h-3 w-[18px] flex-none rounded-[2px]">
+        <rect width="6" height="2" fill="#FCD116" />
+        <rect y="2" width="6" height="1" fill="#003893" />
+        <rect y="3" width="6" height="1" fill="#CE1126" />
+      </svg>
+    )
+  }
+  return (
+    <svg aria-hidden="true" viewBox="0 0 19 10" className="h-3 w-[18px] flex-none rounded-[2px]">
+      <rect width="19" height="10" fill="#FFFFFF" />
+      {[0, 2, 4, 6, 8, 10, 12].map((franja) => (
+        <rect key={franja} y={(franja * 10) / 13} width="19" height={10 / 13} fill="#B22234" />
+      ))}
+      <rect width="7.6" height={(10 / 13) * 7} fill="#3C3B6E" />
+    </svg>
+  )
+}
+
+/** Cambia el idioma de toda la app. Abre en inglés y recuerda la elección. */
+export function SelectorIdioma({ className = '' }) {
+  const actual = useIdioma()
+  return (
+    <div role="group" aria-label="Language / Idioma" className={`inline-flex h-11 flex-none items-center rounded-full border border-borde-fuerte bg-bosque/60 p-1 ${className}`}>
+      {[
+        ['en', 'EN', 'English'],
+        ['es', 'ES', 'Español'],
+      ].map(([id, codigo, nombre]) => (
+        <button
+          key={id}
+          type="button"
+          lang={id}
+          title={nombre}
+          aria-pressed={actual === id}
+          onClick={() => cambiarIdioma(id)}
+          className={`flex h-9 items-center gap-1.5 rounded-full px-2.5 font-mono text-xs font-bold ${
+            actual === id ? 'bg-ambar text-[#1a1206]' : 'text-claro hover:text-white'
+          }`}
+        >
+          <Bandera id={id} />
+          <span aria-hidden="true" className="hidden sm:inline">{codigo}</span>
+          <span className="sr-only">{nombre}</span>
+        </button>
+      ))}
+    </div>
+  )
 }

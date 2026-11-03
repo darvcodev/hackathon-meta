@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './index.css'
+import { useIdioma } from './i18n.js'
 import Inicio from './pages/Inicio.jsx'
 import Finca from './pages/Finca.jsx'
 import Roya from './pages/Roya.jsx'
@@ -10,18 +11,26 @@ import Camara from './pages/Camara.jsx'
 import Asistente from './pages/Asistente.jsx'
 import Estadisticas from './pages/Estadisticas.jsx'
 
+// Al cambiar de idioma, las pantallas se montan de nuevo y piden sus datos en ese idioma.
+function Rutas() {
+  const idioma = useIdioma()
+  return (
+    <Routes key={idioma}>
+      <Route path="/" element={<Inicio />} />
+      <Route path="/finca" element={<Finca />} />
+      <Route path="/roya/:id?" element={<Roya />} />
+      <Route path="/maduracion/:id?" element={<Maduracion />} />
+      <Route path="/camara" element={<Camara />} />
+      <Route path="/asistente" element={<Asistente />} />
+      <Route path="/estadisticas" element={<Estadisticas />} />
+    </Routes>
+  )
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Inicio />} />
-        <Route path="/finca" element={<Finca />} />
-        <Route path="/roya/:id?" element={<Roya />} />
-        <Route path="/maduracion/:id?" element={<Maduracion />} />
-        <Route path="/camara" element={<Camara />} />
-        <Route path="/asistente" element={<Asistente />} />
-        <Route path="/estadisticas" element={<Estadisticas />} />
-      </Routes>
+      <Rutas />
     </BrowserRouter>
   </StrictMode>,
 )
