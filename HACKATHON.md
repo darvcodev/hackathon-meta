@@ -77,7 +77,7 @@ Los valores de la tercera columna son los que usa la app si la variable no exist
 - [ ] Redesplegar una vez y confirmar que el volumen de `/data` conserva el historial.
 - [ ] Compartir el enlace en una app de mensajería y revisar título, descripción e imagen de vista previa.
 - [ ] Revisar en Billing el saldo y la vigencia de los créditos, y mantener la demo activa durante el juicio y la final.
-- [ ] Reemplazar en el README «pendiente de publicar» por los enlaces de la demo y del video.
+- [ ] Reemplazar «Demo video: coming soon» en `README.md` y «pendiente de publicar» en `README.es.md` por el enlace del video. La demo ya está enlazada: https://royalens.scirelabs.com/
 - [ ] Grabar el video con datos observados en la app; describir las mediciones como estimaciones.
 - [ ] Hacer público el repositorio y abrir en una ventana privada los enlaces del repositorio, el video y la demo.
 - [ ] Incluir la URL de la app en la descripción del formulario y enviar.
