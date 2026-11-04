@@ -2,7 +2,7 @@
 
 ![Vista previa de RoyaLens](frontend/public/img/compartir.jpg)
 
-**[▶ Probar la app: royalens.scirelabs.com](https://royalens.scirelabs.com/)** · **Video:** pendiente de publicar · **[Read in English](README.md)**
+**[▶ Probar la app: royalens.scirelabs.com](https://royalens.scirelabs.com/)** · **[▶ Video de la demo](https://youtu.be/rVMMJ_D1gXc)** · **[Read in English](README.md)**
 
 Hecho para el **Meta Global AI Developer Hackathon**, track Indie Developer, tema *Build for Your World*. Todo el código se creó durante el periodo de construcción del evento (27 de octubre a 4 de noviembre de 2026); el historial de Git empieza el 1 de noviembre.
 

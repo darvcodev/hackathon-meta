@@ -2,7 +2,7 @@
 
 **Your coffee farm, seen by AI.** RoyaLens turns a phone photo into a coffee leaf rust measurement, a cherry ripeness count and a farm dashboard, powered by Meta SAM 3.1 and Muse Spark.
 
-**[▶ Try the live app: royalens.scirelabs.com](https://royalens.scirelabs.com/)** · **Demo video:** coming soon · **[Leer en español](README.es.md)**
+**[▶ Try the live app: royalens.scirelabs.com](https://royalens.scirelabs.com/)** · **[▶ Demo video](https://youtu.be/rVMMJ_D1gXc)** · **[Leer en español](README.es.md)**
 
 Built for the **Meta Global AI Developer Hackathon** · Indie Developer track · *Build for Your World*
 
